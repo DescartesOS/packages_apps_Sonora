@@ -1,1 +1,1 @@
-http://archivetune-api.koiiverse.cloud
+https://archivetune-api.koiiverse.cloud
