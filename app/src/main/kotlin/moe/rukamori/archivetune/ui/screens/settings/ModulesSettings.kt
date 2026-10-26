@@ -293,6 +293,7 @@ private fun ModuleRow(
                 ModuleMenu(model.menu == row.id, model.busy == null,
                     remember(row.id, onAction) { { onAction(ModuleSettingsAction.Menu(row.id)) } },
                     remember(onAction) { { onAction(ModuleSettingsAction.Menu(null)) } }) {
+                    ModuleMenuItem(R.string.edit, true, onAction, ModuleSettingsAction.EditMetadata(row.id))
                     ModuleMenuItem(R.string.modules_move_up, row.position > 1, onAction, ModuleSettingsAction.Move(row.id, -1))
                     ModuleMenuItem(R.string.modules_move_down, row.position < model.rows.size, onAction, ModuleSettingsAction.Move(row.id, 1))
                     ModuleMenuItem(R.string.modules_check, true, onAction, ModuleSettingsAction.Check(row.id))
@@ -454,6 +455,55 @@ private fun ModuleDialogs(model: ModuleSettingsUiModel, onAction: (ModuleSetting
     val dismiss = remember(onAction) { { onAction(ModuleSettingsAction.Dismiss) } }
     val confirm = remember(onAction) { { onAction(ModuleSettingsAction.Confirm) } }
     when (model.dialog) {
+        ModuleSettingsDialog.EDIT_METADATA -> model.metadataEditor?.let { editor ->
+            Dialog(onDismissRequest = dismiss, properties = remember { DialogProperties(usePlatformDefaultWidth = false) }) {
+                Scaffold(topBar = {
+                    TopAppBar(title = { Text(stringResource(R.string.modules_edit_metadata)) },
+                        navigationIcon = {
+                            IconButton(onClick = dismiss, enabled = model.busy == null) {
+                                Icon(painterResource(R.drawable.close), stringResource(android.R.string.cancel))
+                            }
+                        })
+                }) { padding ->
+                    Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding), contentAlignment = Alignment.TopCenter) {
+                        LazyColumn(
+                            modifier = Modifier.widthIn(max = ModuleSettingsLayout.ContentMaxWidth).fillMaxWidth().fillMaxHeight().imePadding(),
+                            contentPadding = PaddingValues(SettingsDimensions.ScreenHorizontalPadding),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            item(key = "name", contentType = "field") {
+                                OutlinedTextField(editor.name,
+                                    remember(onAction) { { onAction(ModuleSettingsAction.MetadataChanged(ModuleMetadataField.NAME, it)) } },
+                                    label = { Text(stringResource(R.string.modules_metadata_name)) },
+                                    supportingText = { if (!editor.valid) Text(stringResource(R.string.modules_field_required)) },
+                                    isError = !editor.valid, enabled = model.busy == null, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            }
+                            item(key = "author", contentType = "field") {
+                                OutlinedTextField(editor.author,
+                                    remember(onAction) { { onAction(ModuleSettingsAction.MetadataChanged(ModuleMetadataField.AUTHOR, it)) } },
+                                    label = { Text(stringResource(R.string.modules_metadata_author)) },
+                                    enabled = model.busy == null, singleLine = true, modifier = Modifier.fillMaxWidth())
+                            }
+                            item(key = "description", contentType = "field") {
+                                OutlinedTextField(editor.description,
+                                    remember(onAction) { { onAction(ModuleSettingsAction.MetadataChanged(ModuleMetadataField.DESCRIPTION, it)) } },
+                                    label = { Text(stringResource(R.string.description)) },
+                                    enabled = model.busy == null, minLines = 3, maxLines = 8, modifier = Modifier.fillMaxWidth())
+                            }
+                            if (model.busy != null) item(key = "progress", contentType = "progress") { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+                            if (model.message != null && model.messageIsError) item(key = "error", contentType = "message") {
+                                Text(stringResource(model.message), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            item(key = "save", contentType = "action") {
+                                Button(onClick = remember(onAction) { { onAction(ModuleSettingsAction.SaveMetadata) } },
+                                    enabled = model.busy == null && editor.valid && editor.dirty,
+                                    shapes = ButtonDefaults.shapes(), modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.save)) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         ModuleSettingsDialog.ADD -> ModalBottomSheet(onDismissRequest = dismiss) {
             Column(Modifier.fillMaxWidth().padding(horizontal = SettingsDimensions.ScreenHorizontalPadding)
                 .padding(bottom = SettingsDimensions.ScreenBottomPadding), verticalArrangement = Arrangement.spacedBy(SettingsDimensions.SegmentedItemGap)) {
@@ -510,7 +560,7 @@ private fun ModuleDialogs(model: ModuleSettingsUiModel, onAction: (ModuleSetting
                 }, confirmButton = { TextButton(onClick = confirm, enabled = model.busy == null) { Text(stringResource(if (review.currentVersion != null) R.string.modules_replace else R.string.modules_install)) } },
                 dismissButton = { TextButton(onClick = dismiss, enabled = model.busy == null) { Text(stringResource(android.R.string.cancel)) } })
         }
-        ModuleSettingsDialog.REMOVE_MODULE, ModuleSettingsDialog.REMOVE_CATALOG, ModuleSettingsDialog.DISCARD -> {
+        ModuleSettingsDialog.REMOVE_MODULE, ModuleSettingsDialog.REMOVE_CATALOG, ModuleSettingsDialog.DISCARD, ModuleSettingsDialog.DISCARD_METADATA -> {
             val title = when (model.dialog) {
                 ModuleSettingsDialog.REMOVE_MODULE -> R.string.modules_remove_module_title
                 ModuleSettingsDialog.REMOVE_CATALOG -> R.string.modules_remove_catalog_title
@@ -519,10 +569,11 @@ private fun ModuleDialogs(model: ModuleSettingsUiModel, onAction: (ModuleSetting
             val description = when (model.dialog) {
                 ModuleSettingsDialog.REMOVE_MODULE -> R.string.modules_remove_module_description
                 ModuleSettingsDialog.REMOVE_CATALOG -> R.string.modules_remove_catalog_description
+                ModuleSettingsDialog.DISCARD_METADATA -> R.string.modules_discard_metadata_description
                 else -> R.string.modules_discard_description
             }
             AlertDialog(onDismissRequest = dismiss, title = { Text(stringResource(title)) }, text = { Text(stringResource(description)) },
-                confirmButton = { TextButton(onClick = confirm, enabled = model.busy == null) { Text(stringResource(if (model.dialog == ModuleSettingsDialog.DISCARD) R.string.modules_discard else R.string.modules_remove)) } },
+                confirmButton = { TextButton(onClick = confirm, enabled = model.busy == null) { Text(stringResource(if (model.dialog == ModuleSettingsDialog.DISCARD || model.dialog == ModuleSettingsDialog.DISCARD_METADATA) R.string.modules_discard else R.string.modules_remove)) } },
                 dismissButton = { TextButton(onClick = dismiss, enabled = model.busy == null) { Text(stringResource(android.R.string.cancel)) } })
         }
         ModuleSettingsDialog.DIAGNOSTICS -> model.failure?.let { failure ->

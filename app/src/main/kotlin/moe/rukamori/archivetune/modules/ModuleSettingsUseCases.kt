@@ -33,6 +33,10 @@ class ModuleSettingsUseCases @Inject constructor(
     suspend fun reorder(ids: List<String>) = repository.reorder(ids)
     suspend fun remove(id: String, catalog: Boolean) = if (catalog) repository.removeCatalog(id) else repository.removeModule(id)
     suspend fun save(id: String, values: Map<String, String>) = repository.settings(id, values)
+    suspend fun saveMetadata(id: String, name: String, author: String, description: String) {
+        require(name.isNotBlank())
+        repository.metadata(id, ModuleMetadata(name.trim(), author.trim(), description.trim()))
+    }
     suspend fun file(uri: Uri) = repository.importFile(uri)
     suspend fun url(value: String) = repository.importUrl(value)
     suspend fun catalog(value: String, id: String?) = repository.catalog(value, id)

@@ -33,6 +33,8 @@ import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class ModuleMetadata(val name: String, val author: String, val description: String)
+
 data class InstalledModule(
     val id: String,
     val manifest: ModuleManifest,
@@ -42,6 +44,7 @@ data class InstalledModule(
     val configuration: Map<String, String>,
     val revision: String,
     val updateUrl: String = origin,
+    val metadata: ModuleMetadata? = null,
 )
 
 data class SavedModuleCatalog(
@@ -84,6 +87,11 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
 
     suspend fun setModuleEnabled(id: String, value: Boolean) = change { registry ->
         registry.copy(modules = registry.modules.map { if (it.id == id) it.copy(enabled = value) else it })
+    }
+
+    suspend fun metadata(id: String, value: ModuleMetadata) = change { registry ->
+        require(registry.modules.any { it.id == id })
+        registry.copy(modules = registry.modules.map { if (it.id == id) it.copy(metadata = value) else it })
     }
 
     suspend fun reorder(ids: List<String>) = change { registry ->
@@ -159,7 +167,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
                         field.key to (existing?.configuration?.get(field.key)?.takeIf { value -> validValue(field, value) } ?: field.defaultJson)
                     }
                     val module = InstalledModule(existing?.id ?: UUID.randomUUID().toString(), manifest, pending.document.source,
-                        pending.document.origin, existing?.enabled ?: true, configuration, UUID.randomUUID().toString(), pending.document.updateUrl)
+                        pending.document.origin, existing?.enabled ?: true, configuration, UUID.randomUUID().toString(), pending.document.updateUrl, existing?.metadata)
                     registry.copy(modules = registry.modules.toMutableList().apply {
                         if (existing == null) add(module) else set(indexOfFirst { it.id == existing.id }, module)
                     })
@@ -235,6 +243,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
                 put(JSONObject().put("id", module.id).put("manifest", manifestJson(module.manifest)).put("source", module.source)
                     .put("origin", module.origin).put("enabled", module.enabled).put("revision", module.revision)
                     .put("updateUrl", module.updateUrl)
+                    .put("metadata", module.metadata?.let { JSONObject().put("name", it.name).put("author", it.author).put("description", it.description) })
                     .put("configuration", if (portable) settings else encrypt(settings.toString(), module.id)))
             }
         }).put("catalogs", JSONArray().apply {
@@ -264,7 +273,9 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
             val source = item.getString("source")
             if (source.length > ModuleSourceDecoder.MAX_SOURCE_BYTES) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
             InstalledModule(id, manifest, source, item.optString("origin"), item.optBoolean("enabled"), values, item.getString("revision"),
-                item.optString("updateUrl", item.optString("origin")))
+                item.optString("updateUrl", item.optString("origin")), item.optJSONObject("metadata")?.let {
+                    ModuleMetadata(it.getString("name").also { name -> require(name.isNotBlank()) }, it.getString("author"), it.getString("description"))
+                })
         }, (0 until catalogs.length()).map { index ->
             val item = catalogs.getJSONObject(index)
             val entries = item.getJSONArray("entries")

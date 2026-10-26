@@ -128,4 +128,9 @@
     <string name="modules_quality_hi_res">Hi-Res</string>
     <string name="modules_quality_max">Max quality</string>
     <string name="modules_priority_description">Higher providers are tried first.</string>
+    <string name="modules_edit_metadata">Edit module metadata</string>
+    <string name="modules_metadata_name">Name</string>
+    <string name="modules_metadata_author">Author</string>
+    <string name="modules_metadata_saved">Module metadata saved</string>
+    <string name="modules_discard_metadata_description">Your unsaved module metadata changes will be lost.</string>
 </resources>

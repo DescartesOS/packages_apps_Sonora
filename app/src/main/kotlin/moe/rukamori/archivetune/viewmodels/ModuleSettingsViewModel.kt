@@ -39,7 +39,12 @@ sealed interface ModuleSettingsState {
 }
 
 enum class ModuleSettingsPage { HOME, MODULE, CATALOG }
-enum class ModuleSettingsDialog { ADD, MODULE_URL, CATALOG_URL, REVIEW, REMOVE_MODULE, REMOVE_CATALOG, DISCARD, DIAGNOSTICS }
+enum class ModuleSettingsDialog { ADD, MODULE_URL, CATALOG_URL, REVIEW, REMOVE_MODULE, REMOVE_CATALOG, DISCARD, DIAGNOSTICS, EDIT_METADATA, DISCARD_METADATA }
+
+enum class ModuleMetadataField { NAME, AUTHOR, DESCRIPTION }
+
+@Immutable
+data class ModuleMetadataEditorUi(val name: String, val author: String, val description: String, val dirty: Boolean, val valid: Boolean)
 
 @Immutable
 data class ModuleRowUi(val id: String, val name: String, val subtitle: String, val enabled: Boolean,
@@ -86,9 +91,13 @@ data class ModuleReviewUi(val name: String, val version: String, val currentVers
 data class ModuleSettingsUiModel(val enabled: Boolean, val rows: ImmutableList<ModuleRowUi>, val catalogs: ImmutableList<ModuleCatalogRowUi>,
     val enabledCount: Int, val tab: Int, val page: ModuleSettingsPage, val module: ModuleDetailUi?, val catalog: ModuleCatalogDetailUi?,
     val dialog: ModuleSettingsDialog?, val url: String, val review: ModuleReviewUi?, val busy: String?,
-    @param:StringRes val message: Int?, val messageIsError: Boolean, val menu: String?, val failure: ModuleOperationFailureUi?)
+    @param:StringRes val message: Int?, val messageIsError: Boolean, val menu: String?, val failure: ModuleOperationFailureUi?,
+    val metadataEditor: ModuleMetadataEditorUi?)
 
 sealed interface ModuleSettingsAction {
+    data class EditMetadata(val id: String) : ModuleSettingsAction
+    data class MetadataChanged(val field: ModuleMetadataField, val value: String) : ModuleSettingsAction
+    data object SaveMetadata : ModuleSettingsAction
     data object Retry : ModuleSettingsAction
     data class Tab(val index: Int) : ModuleSettingsAction
     data object Back : ModuleSettingsAction
@@ -156,11 +165,31 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
     private var unsupportedDownloads = emptySet<String>()
     private var expandedEntries = emptySet<String>()
     private var operationFailure: ModuleOperationFailureUi? = null
+    private var metadataDraft: ModuleMetadata? = null
+    private var metadataId: String? = null
 
     init { observe() }
 
     fun onAction(action: ModuleSettingsAction) {
         when (action) {
+            is ModuleSettingsAction.EditMetadata -> {
+                if (busy != null) return
+                val module = registry.modules.firstOrNull { it.id == action.id } ?: return
+                metadataId = module.id
+                metadataDraft = module.metadata ?: ModuleMetadata(module.manifest.name, module.manifest.author, module.manifest.description)
+                dialog = ModuleSettingsDialog.EDIT_METADATA
+                message = null; operationFailure = null; render()
+            }
+            is ModuleSettingsAction.MetadataChanged -> {
+                if (busy != null || dialog != ModuleSettingsDialog.EDIT_METADATA) return
+                val current = metadataDraft ?: return
+                metadataDraft = when (action.field) {
+                    ModuleMetadataField.NAME -> current.copy(name = action.value)
+                    ModuleMetadataField.AUTHOR -> current.copy(author = action.value)
+                    ModuleMetadataField.DESCRIPTION -> current.copy(description = action.value)
+                }
+                render()
+            }
             ModuleSettingsAction.Retry -> observe()
             is ModuleSettingsAction.Tab -> { tab = action.index; render() }
             ModuleSettingsAction.Back -> back()
@@ -174,6 +203,13 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
             }
             is ModuleSettingsAction.UrlChanged -> { url = action.value; render() }
             ModuleSettingsAction.Dismiss -> {
+                if (dialog == ModuleSettingsDialog.EDIT_METADATA || dialog == ModuleSettingsDialog.DISCARD_METADATA) {
+                    if (busy != null) return
+                    if (dialog == ModuleSettingsDialog.DISCARD_METADATA) dialog = ModuleSettingsDialog.EDIT_METADATA
+                    else if (metadataEditor()?.dirty == true) dialog = ModuleSettingsDialog.DISCARD_METADATA
+                    else { dialog = null; metadataDraft = null; metadataId = null }
+                    render(); return
+                }
                 if (busy == null || dialog != ModuleSettingsDialog.REVIEW) {
                     operation?.cancel(); dialog = null; pending = null; updateQueue.clear(); render()
                 }
@@ -236,6 +272,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
 
     private fun mutate(action: ModuleSettingsAction) {
         if (operation?.isActive == true) return
+        if (action == ModuleSettingsAction.SaveMetadata && metadataEditor()?.let { it.valid && it.dirty } != true) return
         if (action == ModuleSettingsAction.CommitOrder && draftOrder == null) return
         busy = when (action) {
             is ModuleSettingsAction.Check -> action.id ?: "all"
@@ -251,6 +288,13 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
         operation = viewModelScope.launch {
             try {
                 when (action) {
+                    ModuleSettingsAction.SaveMetadata -> {
+                        val id = metadataId ?: return@launch
+                        val value = metadataDraft ?: return@launch
+                        useCases.saveMetadata(id, value.name, value.author, value.description)
+                        metadataDraft = null; metadataId = null; dialog = null
+                        message = R.string.modules_metadata_saved
+                    }
                     is ModuleSettingsAction.FileSelected -> pending = useCases.file(action.uri)
                     ModuleSettingsAction.SubmitUrl -> pending = if (dialog == ModuleSettingsDialog.CATALOG_URL) useCases.catalog(url, targetId) else useCases.url(url)
                     is ModuleSettingsAction.Install -> {
@@ -277,6 +321,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                         if (pending == null) message = R.string.modules_no_updates
                     }
                     ModuleSettingsAction.Confirm -> when (dialog) {
+                        ModuleSettingsDialog.DISCARD_METADATA -> { metadataDraft = null; metadataId = null; dialog = null }
                         ModuleSettingsDialog.REVIEW -> {
                             pending?.let { useCases.commit(it) }; pending = updateQueue.pollFirst()
                             dialog = null
@@ -319,6 +364,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
 
     private fun back() {
         if (busy != null) {
+            if (dialog == ModuleSettingsDialog.EDIT_METADATA) return
             if (dialog != ModuleSettingsDialog.REVIEW) operation?.cancel()
             return
         }
@@ -335,8 +381,8 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
         val modules = draftOrder?.mapNotNull { id -> registry.modules.firstOrNull { it.id == id } } ?: registry.modules
         val rows = modules.mapIndexed { index, module ->
             val result = currentHealth(module)
-            ModuleRowUi(module.id, module.manifest.name,
-                listOf(module.manifest.author, module.manifest.version).filter(String::isNotBlank).joinToString(" \u00b7 "),
+            ModuleRowUi(module.id, module.metadata?.name ?: module.manifest.name,
+                listOf(module.metadata?.author ?: module.manifest.author, module.manifest.version).filter(String::isNotBlank).joinToString(" \u00b7 "),
                 module.enabled, index + 1, if (busy == module.id) R.string.modules_checking else statusResource((result.playback ?: result.check)?.status),
                 module.updateUrl.isNotBlank(), busy != module.id && result.playback != null,
                 qualityTags(module.manifest.labels, module.manifest.settings), capabilities(module.manifest.capabilities))
@@ -345,7 +391,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
         val selected = modules.firstOrNull { it.id == selectedId }
         val module = selected?.let { item ->
             val diagnostic = currentHealth(item)
-            ModuleDetailUi(rows.first { it.id == item.id }, item.manifest.description, safeOrigin(item.origin), capabilities(item.manifest.capabilities),
+            ModuleDetailUi(rows.first { it.id == item.id }, item.metadata?.description ?: item.manifest.description, safeOrigin(item.origin), capabilities(item.manifest.capabilities),
                 ImmutableList.copyOf(item.manifest.settings.map { field ->
                     val value = draft[field.key] ?: field.defaultJson
                     val parsed = try { parseJsonValue(value) } catch (_: Exception) { null }
@@ -383,8 +429,15 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
             null -> null
         }
         val model = ModuleSettingsUiModel(registry.enabled, ImmutableList.copyOf(rows), ImmutableList.copyOf(catalogs), modules.count { it.enabled },
-            tab, page, module, catalog, dialog, url, review, busy, message, messageIsError, menu, operationFailure)
+            tab, page, module, catalog, dialog, url, review, busy, message, messageIsError, menu, operationFailure, metadataEditor())
         mutableState.value = if (modules.isEmpty() && registry.catalogs.isEmpty() && page == ModuleSettingsPage.HOME) ModuleSettingsState.Empty(model) else ModuleSettingsState.Success(model)
+    }
+
+    private fun metadataEditor(): ModuleMetadataEditorUi? {
+        val value = metadataDraft ?: return null
+        val module = registry.modules.firstOrNull { it.id == metadataId } ?: return null
+        val original = module.metadata ?: ModuleMetadata(module.manifest.name, module.manifest.author, module.manifest.description)
+        return ModuleMetadataEditorUi(value.name, value.author, value.description, value != original, value.name.isNotBlank())
     }
 
     private fun qualityTags(labels: List<String>, settings: List<ModuleSetting>): ImmutableList<Int> =
