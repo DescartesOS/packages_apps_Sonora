@@ -52,10 +52,20 @@ internal fun ModuleDetails(detail: ModuleDetailUi, model: ModuleSettingsUiModel,
         item(key = "identity", contentType = "identity") {
             Column(Modifier.fillMaxWidth().padding(horizontal = SettingsDimensions.RowHorizontalPadding, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                detail.row.icon?.let { ModuleProviderIcon(it) }
                 if (detail.description.isNotBlank()) Text(detail.description, style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(detail.origin.ifBlank { stringResource(R.string.modules_file_origin) }, style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (detail.information.isNotEmpty()) {
+            item(key = "information_header", contentType = "heading") { ModuleSectionHeading(R.string.modules_metadata_information) }
+            itemsIndexed(detail.information, key = { _, item -> item.label }, contentType = { _, _ -> "information" }) { index, item ->
+                Surface(shape = ListItemDefaults.segmentedShapes(index = index, count = detail.information.size).shape,
+                    color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                    ModuleInformation(item, onAction, Modifier.fillMaxWidth().padding(SettingsDimensions.RowHorizontalPadding))
+                }
             }
         }
         item(key = "playback_header", contentType = "heading") { ModuleSectionHeading(R.string.modules_playback) }
@@ -165,6 +175,16 @@ internal fun ModuleSectionHeading(title: Int, description: Int? = null) {
 }
 
 @Composable
+internal fun ModuleInformation(item: ModuleInfoUi, onAction: (ModuleSettingsAction) -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(item.label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (item.link) TextButton(onClick = remember(item.value, onAction) { { onAction(ModuleSettingsAction.OpenLink(item.value)) } }, contentPadding = PaddingValues(0.dp)) {
+            Text(item.value, style = MaterialTheme.typography.bodyMedium)
+        } else Text(item.value, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
 internal fun ModuleActionRow(label: Int, icon: Int, index: Int, count: Int, modifier: Modifier = Modifier,
     enabled: Boolean = true, destructive: Boolean = false, onClick: () -> Unit) {
     SegmentedListItem(
@@ -239,7 +259,13 @@ private fun ModuleField(field: ModuleFieldUi, index: Int, count: Int, model: Mod
                             maxLines = 3, shape = MaterialTheme.shapes.medium)
                         ExposedDropdownMenu(expanded = expanded, onDismissRequest = remember(onAction) { { onAction(ModuleSettingsAction.Menu(null)) } }) {
                             field.options.forEach { option ->
-                                DropdownMenuItem(text = { Text(option.label) },
+                                DropdownMenuItem(text = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text(option.label)
+                                        if (option.description.isNotBlank()) Text(option.description, style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                },
                                     onClick = remember(option.json, change, onAction) { { change(option.json); onAction(ModuleSettingsAction.Menu(null)) } },
                                     trailingIcon = if (option.json == field.json) { { Icon(painterResource(R.drawable.check), null) } } else null,
                                     contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding)

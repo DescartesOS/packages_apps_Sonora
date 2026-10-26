@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.modules.*
+import okio.ByteString
 import org.json.JSONObject
 import java.text.DateFormat
 import java.util.ArrayDeque
@@ -49,20 +50,23 @@ data class ModuleMetadataEditorUi(val name: String, val author: String, val desc
 @Immutable
 data class ModuleRowUi(val id: String, val name: String, val subtitle: String, val enabled: Boolean,
     val position: Int, @param:StringRes val status: Int, val canUpdate: Boolean, val playbackStatus: Boolean,
-    val qualityTags: ImmutableList<Int>, val capabilities: ImmutableList<Int>)
+    val qualityTags: ImmutableList<Int>, val capabilities: ImmutableList<Int>, val icon: ByteString? = null)
 
 @Immutable
 data class ModuleCatalogRowUi(val id: String, val name: String, val origin: String, val refreshed: String, val count: Int)
 
 @Immutable
 data class ModuleCatalogEntryUi(val key: String, val name: String, val subtitle: String, val description: String,
-    val supported: Boolean, val installed: Boolean, val capabilities: ImmutableList<Int>, val download: String?, val expanded: Boolean, val qualityTags: ImmutableList<Int>)
+    val supported: Boolean, val installed: Boolean, val capabilities: ImmutableList<Int>, val download: String?, val expanded: Boolean, val qualityTags: ImmutableList<Int>, val icon: ByteString? = null)
 
 @Immutable
 data class ModuleOperationFailureUi(@param:StringRes val stage: Int, val code: String)
 
 @Immutable
-data class ModuleOptionUi(val label: String, val json: String)
+data class ModuleOptionUi(val label: String, val json: String, val description: String)
+
+@Immutable
+data class ModuleInfoUi(@param:StringRes val label: Int, val value: String, val link: Boolean = false)
 
 @Immutable
 data class ModuleFieldUi(val key: String, val label: String, val description: String, val type: ModuleSettingType,
@@ -72,7 +76,7 @@ data class ModuleFieldUi(val key: String, val label: String, val description: St
 @Immutable
 data class ModuleDetailUi(val row: ModuleRowUi, val description: String, val origin: String,
     val capabilities: ImmutableList<Int>, val fields: ImmutableList<ModuleFieldUi>, val qualityDeclared: Boolean,
-    val dirty: Boolean, val initialization: ModuleDiagnosticUi?, val playback: ModuleDiagnosticUi?)
+    val dirty: Boolean, val initialization: ModuleDiagnosticUi?, val playback: ModuleDiagnosticUi?, val information: ImmutableList<ModuleInfoUi>)
 
 @Immutable
 data class ModuleDiagnosticUi(@param:StringRes val status: Int, val time: String, val elapsedMs: Long,
@@ -85,7 +89,7 @@ data class ModuleCatalogDetailUi(val row: ModuleCatalogRowUi, val entries: Immut
 @Immutable
 data class ModuleReviewUi(val name: String, val version: String, val currentVersion: String?, val origin: String,
     val description: String, val capabilities: ImmutableList<Int>, val schemaChanged: Boolean, val catalogCount: Int?,
-    val requiredSettings: ImmutableList<String>)
+    val requiredSettings: ImmutableList<String>, val icon: ByteString? = null, val information: ImmutableList<ModuleInfoUi> = ImmutableList.of())
 
 @Immutable
 data class ModuleSettingsUiModel(val enabled: Boolean, val rows: ImmutableList<ModuleRowUi>, val catalogs: ImmutableList<ModuleCatalogRowUi>,
@@ -98,6 +102,8 @@ sealed interface ModuleSettingsAction {
     data class EditMetadata(val id: String) : ModuleSettingsAction
     data class MetadataChanged(val field: ModuleMetadataField, val value: String) : ModuleSettingsAction
     data object SaveMetadata : ModuleSettingsAction
+    data class OpenLink(val url: String) : ModuleSettingsAction
+    data object LinkFailed : ModuleSettingsAction
     data object Retry : ModuleSettingsAction
     data class Tab(val index: Int) : ModuleSettingsAction
     data object Back : ModuleSettingsAction
@@ -132,6 +138,7 @@ sealed interface ModuleSettingsAction {
 }
 
 sealed interface ModuleSettingsEvent {
+    data class OpenLink(val url: String) : ModuleSettingsEvent
     data object PickFile : ModuleSettingsEvent
     data class Copy(val text: String) : ModuleSettingsEvent
     data object NavigateBack : ModuleSettingsEvent
@@ -172,11 +179,13 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
 
     fun onAction(action: ModuleSettingsAction) {
         when (action) {
+            is ModuleSettingsAction.OpenLink -> eventChannel.trySend(ModuleSettingsEvent.OpenLink(action.url))
+            ModuleSettingsAction.LinkFailed -> { message = R.string.modules_link_failed; messageIsError = true; render() }
             is ModuleSettingsAction.EditMetadata -> {
                 if (busy != null) return
                 val module = registry.modules.firstOrNull { it.id == action.id } ?: return
                 metadataId = module.id
-                metadataDraft = module.metadata ?: ModuleMetadata(module.manifest.name, module.manifest.author, module.manifest.description)
+                metadataDraft = module.metadata ?: ModuleMetadata(module.manifest.displayName.ifBlank { module.manifest.name }, module.manifest.author, module.manifest.description)
                 dialog = ModuleSettingsDialog.EDIT_METADATA
                 message = null; operationFailure = null; render()
             }
@@ -381,11 +390,11 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
         val modules = draftOrder?.mapNotNull { id -> registry.modules.firstOrNull { it.id == id } } ?: registry.modules
         val rows = modules.mapIndexed { index, module ->
             val result = currentHealth(module)
-            ModuleRowUi(module.id, module.metadata?.name ?: module.manifest.name,
+            ModuleRowUi(module.id, module.metadata?.name ?: module.manifest.displayName.ifBlank { module.manifest.name },
                 listOf(module.metadata?.author ?: module.manifest.author, module.manifest.version).filter(String::isNotBlank).joinToString(" \u00b7 "),
                 module.enabled, index + 1, if (busy == module.id) R.string.modules_checking else statusResource((result.playback ?: result.check)?.status),
                 module.updateUrl.isNotBlank(), busy != module.id && result.playback != null,
-                qualityTags(module.manifest.labels, module.manifest.settings), capabilities(module.manifest.capabilities))
+                qualityTags(module.manifest.labels, module.manifest.settings), capabilities(module.manifest.capabilities), module.manifest.icon)
         }
         val catalogs = registry.catalogs.map { ModuleCatalogRowUi(it.id, it.name, safeOrigin(it.url), date(it.refreshedAtMs), it.entries.size) }
         val selected = modules.firstOrNull { it.id == selectedId }
@@ -396,15 +405,16 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                     val value = draft[field.key] ?: field.defaultJson
                     val parsed = try { parseJsonValue(value) } catch (_: Exception) { null }
                     val valid = ModuleRepository.validValue(field, value)
-                    ModuleFieldUi(field.key, field.label, field.description, field.type,
+                    val selectedOption = field.options.firstOrNull { equivalentJsonValue(it.valueJson, value) }
+                    ModuleFieldUi(field.key, field.label, listOf(field.description, selectedOption?.description.orEmpty()).filter(String::isNotBlank).distinct().joinToString("\n"), field.type,
                         if (parsed is String) parsed else if (parsed == JSONObject.NULL) "" else if (parsed == null) value else parsed.toString(),
-                        field.options.firstOrNull { equivalentJsonValue(it.valueJson, value) }?.valueJson ?: value,
+                        selectedOption?.valueJson ?: value,
                         parsed == true, field.secret, field.key in revealed,
                         if (valid) null else if (field.required && (parsed == "" || parsed == JSONObject.NULL)) R.string.modules_field_required else R.string.modules_field_invalid,
-                        ImmutableList.copyOf(field.options.map { ModuleOptionUi(it.label, it.valueJson) }),
-                        field.options.firstOrNull { equivalentJsonValue(it.valueJson, value) }?.label.orEmpty())
+                        ImmutableList.copyOf(field.options.map { ModuleOptionUi(it.label, it.valueJson, it.description) }),
+                        selectedOption?.label.orEmpty())
                 }), item.manifest.settings.any { it.key.contains("quality", true) }, draft != item.configuration,
-                diagnostic.check?.let(::diagnosticUi), diagnostic.playback?.let(::diagnosticUi))
+                diagnostic.check?.let(::diagnosticUi), diagnostic.playback?.let(::diagnosticUi), information(item.manifest))
         }
         val catalog = registry.catalogs.firstOrNull { it.id == selectedId }?.let { item ->
             ModuleCatalogDetailUi(catalogs.first { it.id == item.id }, ImmutableList.copyOf(item.entries.map { entry ->
@@ -413,17 +423,17 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                 ModuleCatalogEntryUi(entry.downloadUrl ?: entry.id, entry.name, listOf(entry.author, entry.version).filter(String::isNotBlank).joinToString(" \u00b7 "),
                     entry.description, supported, installed != null,
                     capabilities(installed?.manifest?.capabilities ?: entry.capabilities), entry.downloadUrl, (entry.downloadUrl ?: entry.id) in expandedEntries,
-                    if (supported) qualityTags(entry.labels + installed?.manifest?.labels.orEmpty(), installed?.manifest?.settings.orEmpty()) else ImmutableList.of())
+                    if (supported) qualityTags(entry.labels + installed?.manifest?.labels.orEmpty(), installed?.manifest?.settings.orEmpty()) else ImmutableList.of(), installed?.manifest?.icon)
             }.sortedByDescending { it.installed }))
         }
         val review = when (val value = pending) {
             is ModuleImport.Provider -> {
                 val existing = registry.modules.firstOrNull { it.id == value.replacementId }
                     ?: registry.modules.firstOrNull { it.manifest.id == value.document.manifest.id && it.origin == value.document.origin }
-                ModuleReviewUi(value.document.manifest.name, value.document.manifest.version, existing?.manifest?.version,
+                ModuleReviewUi(value.document.manifest.displayName.ifBlank { value.document.manifest.name }, value.document.manifest.version, existing?.manifest?.version,
                     safeOrigin(value.document.origin), value.document.manifest.description, capabilities(value.document.manifest.capabilities),
                     existing != null && existing.manifest.settings != value.document.manifest.settings, null,
-                    ImmutableList.copyOf(value.document.manifest.settings.filter { it.required }.map { it.label }))
+                    ImmutableList.copyOf(value.document.manifest.settings.filter { it.required }.map { it.label }), value.document.manifest.icon, information(value.document.manifest))
             }
             is ModuleImport.Catalog -> ModuleReviewUi(value.catalog.name, "", null, safeOrigin(value.catalog.url), "", ImmutableList.of(), false, value.catalog.entries.size, ImmutableList.of())
             null -> null
@@ -436,9 +446,18 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
     private fun metadataEditor(): ModuleMetadataEditorUi? {
         val value = metadataDraft ?: return null
         val module = registry.modules.firstOrNull { it.id == metadataId } ?: return null
-        val original = module.metadata ?: ModuleMetadata(module.manifest.name, module.manifest.author, module.manifest.description)
+        val original = module.metadata ?: ModuleMetadata(module.manifest.displayName.ifBlank { module.manifest.name }, module.manifest.author, module.manifest.description)
         return ModuleMetadataEditorUi(value.name, value.author, value.description, value != original, value.name.isNotBlank())
     }
+
+    private fun information(manifest: ModuleManifest): ImmutableList<ModuleInfoUi> = ImmutableList.copyOf(buildList {
+        if (manifest.license.isNotBlank()) add(ModuleInfoUi(R.string.modules_metadata_license, manifest.license))
+        if (manifest.types.isNotEmpty()) add(ModuleInfoUi(R.string.modules_metadata_types, manifest.types.joinToString()))
+        if (manifest.homepage.isNotBlank()) add(ModuleInfoUi(R.string.modules_metadata_homepage, manifest.homepage, true))
+        if (manifest.repository.isNotBlank()) add(ModuleInfoUi(R.string.modules_metadata_repository, manifest.repository, true))
+        if (manifest.minAppVersion.isNotBlank()) add(ModuleInfoUi(R.string.modules_metadata_min_app, manifest.minAppVersion))
+        if (manifest.requiredRuntimeFeatures.isNotEmpty()) add(ModuleInfoUi(R.string.modules_metadata_runtime, manifest.requiredRuntimeFeatures.joinToString()))
+    })
 
     private fun qualityTags(labels: List<String>, settings: List<ModuleSetting>): ImmutableList<Int> =
         ImmutableList.copyOf(useCases.qualityTags(labels, settings).map { tag ->

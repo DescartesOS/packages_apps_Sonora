@@ -10,6 +10,7 @@ package moe.rukamori.archivetune.ui.screens.settings
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.ActivityNotFoundException
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -45,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -55,18 +60,25 @@ import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.viewmodels.*
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import okio.ByteString
 
 @Composable
 fun ModulesSettings(navController: NavController, viewModel: ModuleSettingsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val onAction = remember(viewModel) { viewModel::onAction }
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { onAction(ModuleSettingsAction.FileSelected(it)) }
     }
     val clipboardLabel = stringResource(R.string.modules_diagnostics)
-    LaunchedEffect(viewModel, context, clipboardLabel) {
+    LaunchedEffect(viewModel, context, clipboardLabel, uriHandler) {
         viewModel.events.collect { event -> when (event) {
+            is ModuleSettingsEvent.OpenLink -> try { uriHandler.openUri(event.url) }
+                catch (_: ActivityNotFoundException) { onAction(ModuleSettingsAction.LinkFailed) }
+                catch (_: IllegalArgumentException) { onAction(ModuleSettingsAction.LinkFailed) }
             ModuleSettingsEvent.PickFile -> picker.launch(arrayOf("*/*"))
             ModuleSettingsEvent.NavigateBack -> navController.navigateUp()
             is ModuleSettingsEvent.Copy -> (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
@@ -286,8 +298,11 @@ private fun ModuleRow(
             handle()
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(row.name, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (row.subtitle.isNotBlank()) Text(row.subtitle, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    row.icon?.let { ModuleProviderIcon(it, size = SettingsDimensions.RowIconInnerSize) }
+                    if (row.subtitle.isNotBlank()) Text(row.subtitle, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ModuleMenu(model.menu == row.id, model.busy == null,
@@ -350,6 +365,17 @@ internal fun ModuleBadge(label: String, accent: Boolean = false) {
         Text(label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             style = MaterialTheme.typography.labelMedium)
     }
+}
+
+@Composable
+internal fun ModuleProviderIcon(icon: ByteString, modifier: Modifier = Modifier, size: Dp = SettingsDimensions.RowIconSize) {
+    val context = LocalContext.current
+    val pixels = with(LocalDensity.current) { size.roundToPx() }
+    val request = remember(context, icon, pixels) {
+        ImageRequest.Builder(context).data(icon.asByteBuffer()).size(pixels).memoryCacheKey(icon.sha256().hex()).build()
+    }
+    AsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Fit,
+        placeholder = painterResource(R.drawable.extension), error = painterResource(R.drawable.extension), modifier = modifier.size(size))
 }
 
 @Composable
@@ -447,7 +473,12 @@ private fun ModuleCatalogEntry(entry: ModuleCatalogEntryUi, index: Int, count: I
                 }
             }
         },
-    ) { Text(entry.name, style = MaterialTheme.typography.titleMediumEmphasized) }
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            entry.icon?.let { ModuleProviderIcon(it) }
+            Text(entry.name, style = MaterialTheme.typography.titleMediumEmphasized, modifier = Modifier.weight(1f))
+        }
+    }
 }
 
 @Composable
@@ -544,7 +575,11 @@ private fun ModuleDialogs(model: ModuleSettingsUiModel, onAction: (ModuleSetting
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         item(key = "identity", contentType = "identity") {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(review.name.ifBlank { stringResource(R.string.modules_file_origin) }, style = MaterialTheme.typography.titleMediumEmphasized)
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    review.icon?.let { ModuleProviderIcon(it) }
+                                    Text(review.name.ifBlank { stringResource(R.string.modules_file_origin) }, style = MaterialTheme.typography.titleMediumEmphasized, modifier = Modifier.weight(1f))
+                                }
+                                review.information.forEach { ModuleInformation(it, onAction) }
                                 if (review.currentVersion != null) Text(stringResource(R.string.modules_update_versions, review.currentVersion, review.version)) else if (review.version.isNotBlank()) Text(review.version)
                                 Text(review.origin.ifBlank { stringResource(R.string.modules_file_origin) }, style = MaterialTheme.typography.bodySmall)
                                 if (review.description.isNotBlank()) Text(review.description)

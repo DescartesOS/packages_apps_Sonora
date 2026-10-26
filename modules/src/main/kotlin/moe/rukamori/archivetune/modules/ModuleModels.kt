@@ -7,6 +7,9 @@
 
 package moe.rukamori.archivetune.modules
 
+import android.graphics.BitmapFactory
+import okio.ByteString
+import okio.ByteString.Companion.decodeBase64
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -19,7 +22,7 @@ class ModuleException(val failure: ModuleFailure, cause: Throwable? = null, val 
 
 enum class ModuleSettingType { TEXT, PASSWORD, NUMBER, BOOLEAN, SELECT, UNSUPPORTED }
 
-data class ModuleOption(val label: String, val valueJson: String)
+data class ModuleOption(val label: String, val valueJson: String, val description: String = "", val kind: String = "")
 
 data class ModuleSetting(
     val key: String,
@@ -44,6 +47,14 @@ data class ModuleManifest(
     val labels: List<String>,
     val settings: List<ModuleSetting>,
     val capabilities: List<String>,
+    val displayName: String = "",
+    val homepage: String = "",
+    val repository: String = "",
+    val license: String = "",
+    val types: List<String> = emptyList(),
+    val minAppVersion: String = "",
+    val requiredRuntimeFeatures: List<String> = emptyList(),
+    val icon: ByteString? = null,
 ) {
     companion object {
         fun parse(value: JSONObject): ModuleManifest {
@@ -70,7 +81,7 @@ data class ModuleManifest(
                     field.optBoolean("required"), secret,
                     (0 until options.length()).map { index ->
                         val option = options.opt(index)
-                        if (option is JSONObject) ModuleOption(option.optString("label", option.opt("value").toString()), jsonValue(option.opt("value")))
+                        if (option is JSONObject) ModuleOption(option.optString("label", option.opt("value").toString()), jsonValue(option.opt("value")), option.optString("description"), option.optString("kind"))
                         else ModuleOption(option.toString(), jsonValue(option))
                     },
                     field.optDouble("min").takeIf(Double::isFinite),
@@ -82,13 +93,57 @@ data class ModuleManifest(
                 value.optString("id"), value.optString("name"), value.optString("version"),
                 value.optString("author"), value.optString("description"),
                 (value.optJSONArray("labels").strings() + value.optJSONArray("tags").strings()).distinct(), fields, value.optJSONArray("capabilities").strings(),
+                value.optString("displayName"), projectUrl(value, "homepage"), projectUrl(value, "repository"), value.optString("license"),
+                stringList(value, "type"), value.optString("minAppVersion"), stringList(value, "requiredRuntimeFeatures"),
+                value.optString("iconBase64").takeIf(String::isNotBlank)?.let(::moduleIcon),
             ).also {
                 if (it.id.isBlank() || it.name.isBlank() || !it.capabilities.containsAll(listOf("searchTracks", "getTrackStreamUrl"))) {
                     throw ModuleException(ModuleFailure.UNSUPPORTED)
                 }
                 if (it.id.length > 256 || it.name.length > 256 || it.version.length > 128 || it.description.length > 8192) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+                if (it.displayName.length > 256 || it.license.length > 256 ||
+                    (it.minAppVersion.isNotBlank() && !Regex("[0-9]{1,6}\\.[0-9]{1,6}\\.[0-9]{1,6}").matches(it.minAppVersion))) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
             }
         }
+
+        private fun projectUrl(value: JSONObject, key: String): String = value.optString(key).takeIf(String::isNotBlank)?.let {
+            if (it.length > 2048) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+            ModuleHttpClient.webUrl(it)
+        }.orEmpty()
+
+        private fun stringList(value: JSONObject, key: String): List<String> {
+            if (!value.has(key)) return emptyList()
+            val values = when (val raw = value.get(key)) {
+                is String -> listOf(raw)
+                is JSONArray -> (0 until raw.length()).map { raw.get(it) as? String ?: throw ModuleException(ModuleFailure.INVALID_DOCUMENT) }
+                else -> throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+            }
+            if (values.size > 32 || values.any { it.isBlank() || it.length > 128 }) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+            return values.distinct()
+        }
+    }
+}
+
+fun moduleIcon(encoded: String): ByteString {
+    if (encoded.length > 349528) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+    val bytes = encoded.decodeBase64() ?: throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+    if (bytes.size > 256 * 1024 || bytes.size < 24 || bytes.substring(0, 8).hex() != "89504e470d0a1a0a") throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+    val data = bytes.toByteArray()
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+    if (bounds.outMimeType != "image/png" || bounds.outWidth !in 1..1024 || bounds.outHeight !in 1..1024) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+    return bytes
+}
+
+fun ModuleManifest.requireCompatible(appVersion: String) {
+    val features = setOf("fetch@1", "settings@1", "streamResolution@1", "packagedIcon@1", "qualityOptions@1")
+    if (requiredRuntimeFeatures.any { it !in features }) throw ModuleException(ModuleFailure.UNSUPPORTED,
+        stage = ModuleLoadStage.MANIFEST, diagnosticCode = "ARCH_RUNTIME_FEATURE")
+    if (minAppVersion.isBlank()) return
+    val current = Regex("^[0-9]+\\.[0-9]+\\.[0-9]+").find(appVersion)?.value?.split('.')?.mapNotNull(String::toIntOrNull)
+    val required = minAppVersion.split('.').map(String::toInt)
+    if (current == null || current.size != 3 || current.zip(required).firstOrNull { it.first != it.second }?.let { it.first < it.second } == true) {
+        throw ModuleException(ModuleFailure.UNSUPPORTED, stage = ModuleLoadStage.MANIFEST, diagnosticCode = "ARCH_APP_VERSION")
     }
 }
 

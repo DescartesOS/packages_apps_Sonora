@@ -29,28 +29,31 @@ not provide an audio service or a working lossless provider.
 
 ## Package format
 
-An `.arch` file is a standard ZIP archive with exactly these two regular files at
-its root, with case-sensitive names:
+An `.arch` file is a standard ZIP archive with two required regular files and
+an optional PNG icon at its root, with case-sensitive names:
 
 ```text
 my-provider.arch
 ├── manifest.json
-└── provider.js
+├── provider.js
+└── icon.png        (optional)
 ```
 
-Both files must contain UTF-8 text, a UTF-8 byte-order mark is accepted. Use ZIP
+The manifest and script must contain UTF-8 text, a UTF-8 byte-order mark is accepted. Use ZIP
 Stored or Deflate compression. Password-protected archives, directory entries,
 duplicate entries, extra files, nested paths, and alternate entry names are not
 supported. The installer reads entries into bounded memory, it does not extract
 paths to the filesystem. Bundle all JavaScript into `provider.js`. There is no
-package asset loader, icon field, `require`, or relative script import API in v1.
+general asset loader, `require`, or relative script import API in v1. The optional
+icon is handled by the installer and is not exposed as a script filesystem.
 
 | Limit | Maximum |
 | --- | --- |
 | Downloaded/imported package | 4 MiB |
 | Uncompressed `manifest.json` | 128 KiB |
 | Uncompressed `provider.js` | 3 MiB |
-| Installed normalized JavaScript, including manifest wrapper | 4 MiB |
+| Installed normalized JavaScript, including manifest wrapper and embedded icon | 4 MiB |
+| Optional uncompressed `icon.png` | 256 KiB, dimensions 1–1,024 pixels per axis |
 | Manifest object/array nesting | 32 levels |
 
 The `.arch` suffix is the distribution convention. The importer identifies ZIP
@@ -74,9 +77,15 @@ installed provider or a claim about a particular service.
   "module": {
     "id": "org.example.my-provider",
     "name": "My Provider",
+    "displayName": "My Provider Audio",
     "version": "1.0.0",
     "author": "Your project name",
     "description": "Resolves audio from the service implemented by this provider.",
+    "homepage": "https://example.org/my-provider",
+    "repository": "https://github.com/example/my-provider",
+    "license": "MIT",
+    "type": ["audio_provider"],
+    "requiredRuntimeFeatures": ["fetch@1", "settings@1", "streamResolution@1"],
     "labels": [],
     "capabilities": ["searchTracks", "getTrackStreamUrl"],
     "settings": {
@@ -120,7 +129,44 @@ the credential setting when your service does not need one.
 | `module.description` | Optional string, at most 8,192 characters. |
 | `module.labels` | Optional array of strings. Informational provider declarations, not verification of an active stream. `tags` is also accepted and merged with labels. |
 | `module.capabilities` | Required array of unique supported method names. Must include `searchTracks` and `getTrackStreamUrl` and exactly match the known methods actually exported by the script. |
-| `module.settings` | Optional object mapping setting keys to field declarations. |
+| `module.settings` | Optional object mapping setting keys to field declarations, or an array of declarations with unique string `key` values. |
+| `module.displayName` | Optional user-facing name, at most 256 characters. Used in installed rows, details, and installation review, the stable `id` is unchanged. Local name edits take precedence. |
+| `module.homepage` / `module.repository` | Optional absolute HTTP(S) project/source URLs, at most 2,048 characters. Displayed as links in review/details. |
+| `module.license` | Optional license identifier/text, at most 256 characters. Describes the provider, not the audio. |
+| `module.type` | Optional category string or array of strings, informational. Does not enable new app destinations or host permissions. |
+| `module.minAppVersion` | Optional minimum ArchiveTune version as `major.minor.patch`, with 1–6 digits per part. Installation and resolution reject newer requirements. The installed app's numeric release prefix is compared, build suffixes are ignored. |
+| `module.requiredRuntimeFeatures` | Optional string or array of required feature IDs. Unknown IDs are rejected. |
+| `module.icon` | Optional literal `"icon.png"`, referencing the packaged PNG. Omit the field and file for a module without an icon. |
+| `iconSha256` | Required at package root when an icon is declared, SHA-256 of the exact PNG bytes. Added by the packager. |
+| `module.qualityOptions` | Optional rich quality declarations, see below. Use these or an explicit `settings.quality` field, not both. |
+| `module.defaultQuality` | Optional typed option ID, defaulting to the first declared quality. Must match an option. |
+| `module.qualityLabel` | Optional label for the generated quality setting, defaults to the key `quality`. |
+
+Supported required feature IDs are `fetch@1`, `settings@1`, `streamResolution@1`,
+`packagedIcon@1`, and `qualityOptions@1`. These describe the host functionality
+implemented by this build. publish the exact app build you verified, not just API v1.
+
+### Optional icon
+
+Set `module.icon` to `"icon.png"` and place that PNG beside the manifest and
+script. The packager includes it and calculates `iconSha256`. The installer
+checks its checksum, PNG header, declared dimensions, and size. Icons are
+embedded in the normalized definition and survive restarts, updates, and portable
+backups without a remote image request. A later package update controls its icon.
+The image is shown beside installed author metadata, in installation review,
+module details, and installed catalog entries. Missing icons reserve no space.
+Decode failures use the application extension icon. Remote icon URLs, SVG,
+arbitrary file paths, and additional assets are not supported.
+
+### Relationship to other extension manifests
+
+These fields cover descriptive metadata and quality configuration. A Mornye
+manifest is not directly installable as `.arch`: ArchiveTune still requires its
+package envelope, stable `id`, and callable capability-name array. Mornye-style
+`signedSession`, `permissions`, `serviceHealth`, `searchBehavior`, and `urlHandler`
+declarations are rejected rather than silently granting unsupported behavior.
+This format provides no file/storage permissions, native segment downloader,
+signed-session API, URL registration, or music discovery destinations.
 
 Supported capability names are `searchTracks`, `getTrackStreamUrl`, `getAlbum`,
 `getArtist`, and `getPlaylist`. Only the first two are called by automatic audio
@@ -173,6 +219,46 @@ from portable backups. Never place a real credential in a default, package,
 catalog, diagnostic label, or published source.
 
 ### Independent audio quality
+
+An alternative to declaring `settings.quality` is a `qualityOptions` array in
+the module object. Each entry has a unique non-null scalar `id`, a nonblank
+`label` (at most 256 characters), and optional `description` (2,048 characters)
+and `kind` (64 characters). IDs retain their string, number, or boolean type.
+For example, these module fields declare a provider-owned quality control:
+
+```json
+{
+  "qualityLabel": "Audio quality",
+  "defaultQuality": "LOSSLESS",
+  "qualityOptions": [
+    {
+      "id": "LOSSLESS",
+      "label": "Lossless",
+      "description": "Request the lossless encoding offered by this source.",
+      "kind": "lossless"
+    },
+    {
+      "id": "HI_RES_LOSSLESS",
+      "label": "Hi-Res lossless",
+      "description": "Request the source's Hi-Res variant when available.",
+      "kind": "lossless"
+    }
+  ]
+}
+```
+
+Do not include this declaration alongside `settings.quality`, ambiguous duplicate
+definitions are rejected. The installer creates the canonical select field from
+the options, and uses `defaultQuality` or the first option's ID as its default.
+Descriptions appear in the dropdown and below the selected control. `kind` is
+descriptive metadata, it does not assert the codec of a resolved stream or grant
+native spatial-audio, conversion, or download functionality.
+
+For explicit select fields, options also accept `description` and `kind`. These
+are retained across updates and backups. As an authoring convenience, `settings`
+may instead be an array of objects with unique string `key` values, `default` is
+accepted as a typed default after `defaultValue` and `value`. The installer
+normalizes either authoring shape into the same keyed runtime settings object.
 
 The module owns its quality vocabulary, values, default, and any fallback
 policy. ArchiveTune does not translate those values through its YouTube quality
@@ -377,8 +463,8 @@ python scripts/package_module.py path/to/my-provider path/to/my-provider.arch
 ```
 
 The input directory must contain your manifest and implemented entry script. The
-destination directory must already exist. The command writes only those two
-files into the archive, calculates the script checksum, checks size limits, and
+destination directory must already exist. The command writes the required files
+and declared optional icon into the archive, calculates their checksums, checks size limits, and
 atomically replaces the destination file if it exists. It does not execute your
 script or validate the complete service integration. The application remains the
 authority for manifest, settings, and exported-capability validation.
@@ -477,6 +563,10 @@ and redacted codes, arbitrary provider exception messages are not displayed.
 | `ARCH_CHECKSUM` | Pack again after script edits, do not hash a different file or text-normalized copy. |
 | `ARCH_MANIFEST`, `ARCH_IDENTITY`, `ARCH_LABELS`, `ARCH_SETTINGS`, `ARCH_CAPABILITIES` | Manifest types, required identity, typed defaults, numeric bounds, known capability names. |
 | `ARCH_SETTING_TYPE` | Replace an unknown setting type with a supported declaration. |
+| `ARCH_ICON`, `ARCH_ICON_CHECKSUM` | Declare `icon.png` explicitly, include only that image, and repackage after editing it. Invalid PNG size, dimensions, or encoding are also rejected. |
+| `ARCH_APP_VERSION`, `ARCH_RUNTIME_FEATURE` | The installed ArchiveTune build must satisfy the declared minimum version and every required host feature. |
+| `ARCH_QUALITY_OPTIONS` | Remove duplicate quality declarations; check unique typed IDs and that the default matches an option. |
+| `ARCH_UNSUPPORTED_…` | Remove declarations for host behavior this runtime does not implement; descriptive metadata does not activate those APIs. |
 | Provider TypeError during installation | Export an object and implement exactly the declared known capabilities. |
 | Ready | Initialization/configuration succeeded, this does not prove search or audio access. |
 | No acceptable match | Inspect recording title, artists, duration, explicit metadata, and whether results are actually empty. |

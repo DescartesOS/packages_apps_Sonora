@@ -298,6 +298,8 @@ class ModuleRuntime(context: Context, private val http: ModuleHttpClient) {
         val manifest = runtime.evaluate<String>(
             "JSON.stringify((()=>{const p=globalThis.__provider;if(!p||typeof p!=='object')return {};" +
                 "return {id:p.id,name:p.name,version:p.version,author:p.author,description:p.description," +
+                "displayName:p.displayName,homepage:p.homepage,repository:p.repository,license:p.license,type:p.type," +
+                "minAppVersion:p.minAppVersion,requiredRuntimeFeatures:p.requiredRuntimeFeatures,iconBase64:p.iconBase64," +
                 "labels:[...(Array.isArray(p.labels)?p.labels:[]),...(Array.isArray(p.tags)?p.tags:[])]," +
                 "settings:p.settings||{},capabilities:['searchTracks','getTrackStreamUrl','getAlbum','getArtist','getPlaylist'].filter(k=>typeof p[k]==='function')};})());",
         )

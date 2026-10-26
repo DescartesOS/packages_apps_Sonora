@@ -33,6 +33,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 import javax.inject.Singleton
+import moe.rukamori.archivetune.BuildConfig
 
 data class ModuleMetadata(val name: String, val author: String, val description: String)
 
@@ -199,7 +200,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         ensureActive()
         if (depth > 4 || (origin.isNotBlank() && origin in visited)) throw ModuleException(ModuleFailure.INVALID_DOCUMENT, stage = ModuleLoadStage.DECODE)
         if (ModulePackageReader.isPackage(bytes)) {
-            val source = ModulePackageReader.read(bytes)
+            val source = ModulePackageReader.read(bytes, BuildConfig.VERSION_NAME)
             val manifest = runtime.inspect(source, origin)
             return@withContext ModuleImport.Provider(ModuleDocument(source, origin, manifest), replacementId)
         }
@@ -305,11 +306,14 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
     private fun manifestJson(manifest: ModuleManifest): JSONObject = JSONObject()
         .put("id", manifest.id).put("name", manifest.name).put("version", manifest.version).put("author", manifest.author)
         .put("description", manifest.description).put("labels", JSONArray(manifest.labels)).put("capabilities", JSONArray(manifest.capabilities))
+        .put("displayName", manifest.displayName).put("homepage", manifest.homepage).put("repository", manifest.repository).put("license", manifest.license)
+        .put("type", JSONArray(manifest.types)).put("minAppVersion", manifest.minAppVersion).put("requiredRuntimeFeatures", JSONArray(manifest.requiredRuntimeFeatures))
+        .put("iconBase64", manifest.icon?.base64())
         .put("settings", JSONObject().apply {
             manifest.settings.forEach { field -> put(field.key, JSONObject().put("label", field.label).put("description", field.description)
                 .put("type", if (field.integerOnly) "integer" else field.type.name.lowercase(java.util.Locale.ROOT)).put("defaultValue", parseJsonValue(field.defaultJson)).put("required", field.required)
                 .put("secret", field.secret).put("min", field.minimum).put("max", field.maximum)
-                .put("options", JSONArray().apply { field.options.forEach { put(JSONObject().put("label", it.label).put("value", parseJsonValue(it.valueJson))) } })) }
+                .put("options", JSONArray().apply { field.options.forEach { put(JSONObject().put("label", it.label).put("value", parseJsonValue(it.valueJson)).put("description", it.description).put("kind", it.kind)) } })) }
         })
 
     private fun secretKey(): SecretKey = synchronized(keyLock) {
@@ -342,6 +346,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         private const val KEY_ALIAS = "module_configuration_v1"
 
         fun validateConfiguration(manifest: ModuleManifest, values: Map<String, String>) {
+            manifest.requireCompatible(BuildConfig.VERSION_NAME)
             if (manifest.settings.any { !validValue(it, values[it.key] ?: it.defaultJson) }) throw ModuleException(ModuleFailure.INVALID_CONFIGURATION)
         }
 

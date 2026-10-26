@@ -9,6 +9,7 @@ package moe.rukamori.archivetune.modules
 
 import android.util.JsonReader
 import android.util.JsonToken
+import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -31,7 +32,7 @@ object ModulePackageReader {
     fun isPackage(bytes: ByteArray): Boolean = bytes.size >= 4 && bytes[0] == 0x50.toByte() && bytes[1] == 0x4b.toByte() &&
         ((bytes[2] == 3.toByte() && bytes[3] == 4.toByte()) || (bytes[2] == 5.toByte() && bytes[3] == 6.toByte()))
 
-    suspend fun read(bytes: ByteArray): String = withContext(Dispatchers.Default) {
+    suspend fun read(bytes: ByteArray, appVersion: String): String = withContext(Dispatchers.Default) {
         if (bytes.size > ModuleSourceDecoder.MAX_SOURCE_BYTES) invalid("SIZE")
         val files = HashMap<String, ByteArray>()
         try {
@@ -42,6 +43,7 @@ object ModulePackageReader {
                     val limit = when (entry.name) {
                         "manifest.json" -> MANIFEST_LIMIT
                         "provider.js" -> SCRIPT_LIMIT
+                        "icon.png" -> 256 * 1024
                         else -> invalid("ENTRY")
                     }
                     if (entry.isDirectory || entry.name in files || entry.size > limit) invalid("ENTRY")
@@ -61,18 +63,29 @@ object ModulePackageReader {
                 throw ModuleException(ModuleFailure.UNSUPPORTED, stage = ModuleLoadStage.MANIFEST, diagnosticCode = "ARCH_VERSION")
             }
             if (root.optString("entry") != "provider.js") invalid("ENTRY")
-            val expectedHash = root.opt("sha256") as? String ?: invalid("CHECKSUM")
-            if (!Regex("[0-9a-f]{64}").matches(expectedHash)) invalid("CHECKSUM")
-            val actualHash = MessageDigest.getInstance("SHA-256").digest(scriptBytes).joinToString("") { "%02x".format(it.toInt() and 255) }
-            if (actualHash != expectedHash) throw ModuleException(ModuleFailure.INTEGRITY, stage = ModuleLoadStage.DECODE, diagnosticCode = "ARCH_CHECKSUM")
+            checksum(scriptBytes, root.opt("sha256"), "CHECKSUM")
             val metadata = root.getJSONObject("module")
+            for (key in listOf("signedSession", "permissions", "serviceHealth", "searchBehavior", "urlHandler")) {
+                if (metadata.has(key)) throw ModuleException(ModuleFailure.UNSUPPORTED, stage = ModuleLoadStage.MANIFEST, diagnosticCode = "ARCH_UNSUPPORTED_$key")
+            }
             for (key in listOf("id", "name", "version")) if (metadata.opt(key) !is String) invalid("IDENTITY")
-            for (key in listOf("author", "description")) if (metadata.has(key) && metadata.get(key) !is String) invalid("IDENTITY")
+            for (key in listOf("author", "description", "displayName", "homepage", "repository", "license", "minAppVersion", "icon", "qualityLabel")) {
+                if (metadata.has(key) && metadata.get(key) !is String) invalid("IDENTITY")
+            }
+            if (metadata.has("iconBase64")) invalid("ICON")
+            val icon = files["icon.png"]
+            if (metadata.has("icon")) {
+                if (metadata.getString("icon") != "icon.png" || icon == null) invalid("ICON")
+                checksum(icon, root.opt("iconSha256"), "ICON_CHECKSUM")
+                metadata.put("iconBase64", Base64.encodeToString(icon, Base64.NO_WRAP))
+            } else if (icon != null || root.has("iconSha256")) invalid("ICON")
+            normalizeSettings(metadata)
             for (key in listOf("labels", "tags")) if (metadata.has(key)) {
                 val labels = metadata.getJSONArray(key)
                 for (index in 0 until labels.length()) if (labels.get(index) !is String) invalid("LABELS")
             }
             val manifest = ModuleManifest.parse(metadata)
+            manifest.requireCompatible(appVersion)
             if (!Regex("[a-z0-9][a-z0-9._-]{0,127}").matches(manifest.id) || manifest.version.isBlank()) invalid("IDENTITY")
             val declared = metadata.getJSONArray("capabilities")
             if (declared.length() != manifest.capabilities.size || manifest.capabilities.distinct().size != declared.length() ||
@@ -86,6 +99,7 @@ object ModulePackageReader {
                 if (field.key.isBlank() || (field.minimum != null && field.maximum != null && field.minimum > field.maximum) ||
                     !field.copy(required = false).acceptsValue(field.defaultJson) ||
                     (field.type == ModuleSettingType.SELECT && field.options.isEmpty())) invalid("SETTINGS")
+                if (field.options.any { it.label.length > 256 || it.description.length > 2048 || it.kind.length > 64 }) invalid("SETTINGS")
                 for (key in listOf("required", "secret")) if (schema.has(key) && schema.get(key) !is Boolean) invalid("SETTINGS")
                 for (key in listOf("min", "max")) if (schema.has(key) && (schema.get(key) !is Number || !schema.getDouble(key).isFinite())) invalid("SETTINGS")
             }
@@ -106,7 +120,10 @@ object ModulePackageReader {
                     if (actual.length !== metadata.capabilities.length || metadata.capabilities.some(key => !actual.includes(key))) throw new TypeError('Provider capability mismatch');
                     return Object.assign(provider, {id: metadata.id, name: metadata.name, version: metadata.version,
                         author: metadata.author || '', description: metadata.description || '',
-                        labels: metadata.labels || [], tags: metadata.tags || [], settings: metadata.settings || {}});
+                        labels: metadata.labels || [], tags: metadata.tags || [], settings: metadata.settings || {},
+                        displayName: metadata.displayName || '', homepage: metadata.homepage || '', repository: metadata.repository || '',
+                        license: metadata.license || '', type: metadata.type || [], minAppVersion: metadata.minAppVersion || '',
+                        requiredRuntimeFeatures: metadata.requiredRuntimeFeatures || [], iconBase64: metadata.iconBase64 || ''});
                 })();
             """.trimIndent()
             if (source.toByteArray(Charsets.UTF_8).size > ModuleSourceDecoder.MAX_SOURCE_BYTES) invalid("SIZE")
@@ -114,6 +131,55 @@ object ModulePackageReader {
         } catch (error: JSONException) {
             throw ModuleException(ModuleFailure.INVALID_DOCUMENT, error, ModuleLoadStage.MANIFEST, "ARCH_MANIFEST")
         }
+    }
+
+    private fun checksum(bytes: ByteArray, expected: Any?, code: String) {
+        if (expected !is String || !Regex("[0-9a-f]{64}").matches(expected)) invalid(code)
+        val actual = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
+        if (actual != expected) throw ModuleException(ModuleFailure.INTEGRITY, stage = ModuleLoadStage.DECODE, diagnosticCode = "ARCH_$code")
+    }
+
+    private fun normalizeSettings(metadata: JSONObject) {
+        val fields = when (val raw = metadata.opt("settings")) {
+            null -> JSONObject()
+            is JSONObject -> raw
+            is JSONArray -> JSONObject().apply {
+                for (index in 0 until raw.length()) {
+                    val field = raw.getJSONObject(index)
+                    val key = field.opt("key") as? String ?: invalid("SETTINGS")
+                    if (key.isBlank() || has(key)) invalid("SETTINGS")
+                    put(key, field)
+                }
+            }
+            else -> invalid("SETTINGS")
+        }
+        fields.keys().forEach { key ->
+            val field = fields.getJSONObject(key)
+            if (!field.has("defaultValue") && !field.has("value") && field.has("default")) field.put("defaultValue", field.get("default"))
+        }
+        if (metadata.has("qualityOptions")) {
+            val declared = metadata.getJSONArray("qualityOptions")
+            if (declared.length() !in 1..256 || fields.has("quality")) invalid("QUALITY_OPTIONS")
+            val options = JSONArray()
+            val ids = ArrayList<String>()
+            for (index in 0 until declared.length()) {
+                val option = declared.getJSONObject(index)
+                val id = option.get("id")
+                if (id == JSONObject.NULL || id is JSONObject || id is JSONArray || ids.any { equivalentJsonValue(it, jsonValue(id)) }) invalid("QUALITY_OPTIONS")
+                ids.add(jsonValue(id))
+                for (key in listOf("label", "description", "kind")) if (option.has(key) && option.get(key) !is String) invalid("QUALITY_OPTIONS")
+                val label = option.getString("label")
+                if (label.isBlank() || label.length > 256 || option.optString("description").length > 2048 || option.optString("kind").length > 64) invalid("QUALITY_OPTIONS")
+                options.put(JSONObject().put("label", label).put("value", id).put("description", option.optString("description")).put("kind", option.optString("kind")))
+            }
+            val default = if (metadata.has("defaultQuality")) metadata.get("defaultQuality") else declared.getJSONObject(0).get("id")
+            if (ids.none { equivalentJsonValue(it, jsonValue(default)) }) invalid("QUALITY_OPTIONS")
+            val label = metadata.optString("qualityLabel", "quality")
+            if (label.isBlank() || label.length > 256) invalid("QUALITY_OPTIONS")
+            fields.put("quality", JSONObject().put("type", "select").put("label", label)
+                .put("defaultValue", default).put("options", options))
+        } else if (metadata.has("defaultQuality")) invalid("QUALITY_OPTIONS")
+        metadata.put("settings", fields)
     }
 
     private fun manifest(bytes: ByteArray): JSONObject {

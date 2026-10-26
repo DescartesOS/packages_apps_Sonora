@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 import os
+import struct
 from pathlib import Path
 import tempfile
 import zipfile
@@ -38,12 +39,27 @@ def main():
         if manifest.get("entry") != "provider.js" or not isinstance(manifest.get("module"), dict):
             raise ValueError("Expected entry provider.js and a module object")
         manifest["sha256"] = hashlib.sha256(script).hexdigest()
+        files = [("provider.js", script)]
+        icon_name = manifest["module"].get("icon")
+        if "icon" in manifest["module"]:
+            if icon_name != "icon.png":
+                raise ValueError("The optional icon must be named icon.png")
+            icon = (directory / icon_name).read_bytes()
+            if not 24 <= len(icon) <= 256 * 1024 or icon[:8] != b"\x89PNG\r\n\x1a\n" or icon[12:16] != b"IHDR":
+                raise ValueError("icon.png must be a PNG of at most 256 KiB")
+            width, height = struct.unpack(">II", icon[16:24])
+            if not 1 <= width <= 1024 or not 1 <= height <= 1024:
+                raise ValueError("icon.png dimensions must be between 1 and 1024 pixels")
+            manifest["iconSha256"] = hashlib.sha256(icon).hexdigest()
+            files.append(("icon.png", icon))
+        else:
+            manifest.pop("iconSha256", None)
         manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")
         if len(manifest_bytes) > 128 * 1024:
             raise ValueError("Packed manifest exceeds 128 KiB")
         buffer = io.BytesIO()
         with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for name, data in (("manifest.json", manifest_bytes), ("provider.js", script)):
+            for name, data in [("manifest.json", manifest_bytes)] + files:
                 entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
                 entry.compress_type = zipfile.ZIP_DEFLATED
                 entry.external_attr = 0o100644 << 16
