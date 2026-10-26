@@ -462,11 +462,90 @@ From the ArchiveTune repository root:
 python scripts/package_module.py path/to/my-provider path/to/my-provider.arch
 ```
 
+### Interactive terminal studio
+
+Run the downloaded script without arguments to open the terminal interface:
+
+```text
+python package_module.py
+```
+
+On Windows, `py -3 package_module.py` also works. To start at a particular
+workspace, use `python package_module.py ./my-provider --interactive`. This
+mode requires an interactive terminal, so download the script before launching
+it instead of piping its contents into Python's standard input.
+
+The studio provides these actions:
+
+| Action | Behavior |
+| --- | --- |
+| Review and validate | Displays provider identity, compatibility requirements, input files, hashes, typed settings, option descriptions, excluded files, and field-specific findings. |
+| Edit metadata | Edits identity, display name, version, author, description, project links, license, categories, labels, capabilities, runtime requirements, and optional icon declaration. |
+| Edit settings / quality | Replaces a declaration using a JSON value or `@path/to/value.json`. Settings previews mask sensitive defaults. Use `-` to remove a declaration. |
+| Save manifest | Validates manifest declarations and explicitly saves the draft atomically. This action does not require the provider script or icon to exist yet, packaging checks those files separately. A file changed by another editor requires confirmation before replacement. |
+| Package .arch | Validates the current draft and actual files, asks for an output path, confirms writes/replacements, and produces a package report. |
+| Inspect an .arch file | Checks archive entries, size limits, manifest declarations, script encoding, icon headers/dimensions, and stored checksums without extracting files or executing JavaScript. |
+| Export last report | Writes the last validation, package, or inspection report to a separate JSON file. Exporting does not revalidate subsequent draft changes. |
+| Change workspace / Exit | Confirms before discarding unsaved manifest changes. |
+
+If an existing workspace has no manifest, the studio can create an authoring
+draft with a stable ID, name, initial version, and the two mandatory capability
+declarations. It does not generate `provider.js`, invent an endpoint, or supply
+an audio provider. Implement the methods yourself before packaging.
+
+Editing keeps a draft in memory. Saving the manifest and packaging it are
+separate actions: packaging uses the current draft but does not silently save
+those edits to the source manifest. Script and icon files are never edited by
+the studio. They are read again when the user requests validation or packaging.
+
+### Scripted validation, inspection, and reports
+
+The original two-path packaging command remains supported. In scripted mode,
+an existing destination package is replaced atomically without prompting.
+
+```text
+python package_module.py ./my-provider --check
+python package_module.py --inspect ./my-provider.arch
+python package_module.py ./my-provider --check --app-version 15.1.0
+python package_module.py ./my-provider ./my-provider.arch --report ./package-report.json
+python package_module.py --inspect ./my-provider.arch --json
+```
+
+Use your target ArchiveTune version with `--app-version`. Without it, the tool
+validates the minimum-version declaration but does not claim that a particular
+app build satisfies it. Unknown required runtime features are rejected using
+this script's supported-feature list.
+
+`--check` writes no package. `--inspect` reads an existing package without
+changing it. `--json` sends a machine-readable report to standard output,
+`--report FILE.json` also saves the report to a separate file. Required input
+files and the package cannot be used as report destinations. Report files are
+replaced atomically. Argument errors go to standard error and are not JSON.
+
+Reports include entry byte counts and SHA-256 values, package size and SHA-256
+when applicable, compression savings for created packages, typed setting
+summaries and choices, findings with paths, and installation steps. Sensitive
+defaults are masked using declared secrecy/password types and credential-like
+keys, nested credential-like default keys are also redacted. Redaction is not
+a substitute for excluding personal credentials from a distributed manifest.
+
+Each report explicitly records runtime verification as not performed. These
+checks do not execute JavaScript, verify callable exports, contact the provider,
+decode audio, or prove that playback/downloads work. A script can pass local
+validation and still fail installation or resolution in the app.
+
+Exit codes are `0` for a successful operation, `1` for validation or I/O errors,
+`2` for invalid command arguments, and `130` for interactive cancellation or
+interruption. If a package was written successfully but saving its report fails,
+the package remains on disk and the command exits with an error. Cancellation
+preserves completed writes and discards uncommitted in-memory edits.
+
 The input directory must contain your manifest and implemented entry script. The
 destination directory must already exist. The command writes the required files
 and declared optional icon into the archive, calculates their checksums, checks size limits, and
-atomically replaces the destination file if it exists. It does not execute your
-script or validate the complete service integration. The application remains the
+atomically replaces the destination file if it exists. It validates declarations
+and package inputs but does not execute your script or validate the service
+integration. The application remains the
 authority for manifest, settings, and exported-capability validation.
 
 If using another ZIP tool, calculate SHA-256 over the exact `provider.js` bytes,
@@ -565,8 +644,8 @@ and redacted codes, arbitrary provider exception messages are not displayed.
 | `ARCH_SETTING_TYPE` | Replace an unknown setting type with a supported declaration. |
 | `ARCH_ICON`, `ARCH_ICON_CHECKSUM` | Declare `icon.png` explicitly, include only that image, and repackage after editing it. Invalid PNG size, dimensions, or encoding are also rejected. |
 | `ARCH_APP_VERSION`, `ARCH_RUNTIME_FEATURE` | The installed ArchiveTune build must satisfy the declared minimum version and every required host feature. |
-| `ARCH_QUALITY_OPTIONS` | Remove duplicate quality declarations; check unique typed IDs and that the default matches an option. |
-| `ARCH_UNSUPPORTED_…` | Remove declarations for host behavior this runtime does not implement; descriptive metadata does not activate those APIs. |
+| `ARCH_QUALITY_OPTIONS` | Remove duplicate quality declarations, check unique typed IDs and that the default matches an option. |
+| `ARCH_UNSUPPORTED_…` | Remove declarations for host behavior this runtime does not implement, descriptive metadata does not activate those APIs. |
 | Provider TypeError during installation | Export an object and implement exactly the declared known capabilities. |
 | Ready | Initialization/configuration succeeded, this does not prove search or audio access. |
 | No acceptable match | Inspect recording title, artists, duration, explicit metadata, and whether results are actually empty. |
