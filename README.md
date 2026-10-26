@@ -179,6 +179,10 @@ If you choose to use a fork, you do so at your own risk.
 
 ---
 
+## Module development
+
+ArchiveTune supports `.arch` provider packages installed from a file, a direct URL, or a catalog. See the public [module authoring guide](MODULES.md) for the package specification, JavaScript API, configuration schema, lossless stream results, packaging command, and publishing instructions.
+
 ## 📥 Download Now
 
 <div align="center" id="download-now">

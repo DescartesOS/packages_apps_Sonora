@@ -118,6 +118,21 @@ data class ModuleStream(
 
 data class ModuleDocument(val source: String, val origin: String, val manifest: ModuleManifest, val updateUrl: String = origin)
 
+fun ModuleSetting.acceptsValue(json: String): Boolean = try {
+    val value = parseJsonValue(json)
+    val minimum = this.minimum
+    val maximum = this.maximum
+    if (value == JSONObject.NULL) !required else if (required && value.toString().isBlank()) false else when (type) {
+        ModuleSettingType.TEXT, ModuleSettingType.PASSWORD -> value is String
+        ModuleSettingType.BOOLEAN -> value is Boolean
+        ModuleSettingType.NUMBER -> value is Number && value.toDouble().isFinite() &&
+            (!integerOnly || value.toDouble() % 1.0 == 0.0) &&
+            (minimum == null || value.toDouble() >= minimum) && (maximum == null || value.toDouble() <= maximum)
+        ModuleSettingType.SELECT -> options.any { equivalentJsonValue(it.valueJson, json) }
+        ModuleSettingType.UNSUPPORTED -> !required
+    }
+} catch (_: org.json.JSONException) { false }
+
 data class ModuleCatalogEntry(
     val id: String,
     val name: String,

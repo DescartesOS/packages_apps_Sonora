@@ -47,9 +47,14 @@ class ModuleHttpClient(configuredClient: OkHttpClient? = null) {
         }.build()
 
     suspend fun document(url: String): Pair<String, String> {
+        val (bytes, origin) = source(url)
+        return bytes.toString(Charsets.UTF_8) to origin
+    }
+
+    suspend fun source(url: String): Pair<ByteArray, String> {
         val response = execute(Request.Builder().url(webUrl(url)).build(), "document:${java.util.UUID.randomUUID()}", ModuleSourceDecoder.MAX_SOURCE_BYTES)
         if (!response.getBoolean("ok")) throw ModuleException(ModuleFailure.NETWORK)
-        return response.getString("text") to response.getString("url")
+        return Base64.decode(response.getString("base64"), Base64.DEFAULT) to response.getString("url")
     }
 
     suspend fun fetch(json: String, baseUrl: String, namespace: String, onStatus: (Int) -> Unit = {}): String {

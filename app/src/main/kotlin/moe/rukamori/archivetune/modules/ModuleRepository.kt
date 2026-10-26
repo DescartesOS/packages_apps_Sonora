@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -124,12 +125,12 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         val bytes = context.contentResolver.openInputStream(uri)?.use { it.readModuleBytes(ModuleSourceDecoder.MAX_SOURCE_BYTES) }
             ?: throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
         if (bytes.size > ModuleSourceDecoder.MAX_SOURCE_BYTES) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
-        prepare(bytes.toString(Charsets.UTF_8), "", null)
+        prepare(bytes, "", null)
     }
 
     suspend fun importUrl(url: String, replacementId: String? = null): ModuleImport = try {
-        val (text, origin) = http.document(url.trim())
-        val prepared = prepare(text, origin, replacementId)
+        val (bytes, origin) = http.source(url.trim())
+        val prepared = prepare(bytes, origin, replacementId)
         if (prepared is ModuleImport.Provider) prepared.copy(document = prepared.document.copy(updateUrl = ModuleHttpClient.webUrl(url.trim()))) else prepared
     } catch (error: CancellationException) { throw error }
     catch (error: ModuleException) { throw error }
@@ -193,21 +194,30 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         change(replacement = restored) { restored.copy(enabled = false, modules = restored.modules.map { it.copy(enabled = false) }) }
     }
 
-    private suspend fun prepare(text: String, origin: String, replacementId: String?): ModuleImport {
+    private suspend fun prepare(bytes: ByteArray, origin: String, replacementId: String?,
+        visited: Set<String> = emptySet(), depth: Int = 0): ModuleImport = withContext(Dispatchers.Default) {
+        ensureActive()
+        if (depth > 4 || (origin.isNotBlank() && origin in visited)) throw ModuleException(ModuleFailure.INVALID_DOCUMENT, stage = ModuleLoadStage.DECODE)
+        if (ModulePackageReader.isPackage(bytes)) {
+            val source = ModulePackageReader.read(bytes)
+            val manifest = runtime.inspect(source, origin)
+            return@withContext ModuleImport.Provider(ModuleDocument(source, origin, manifest), replacementId)
+        }
+        val text = bytes.toString(Charsets.UTF_8)
         val trimmed = text.removePrefix("\uFEFF").trim()
         val json = if (trimmed.startsWith("{")) try { JSONObject(trimmed) } catch (_: org.json.JSONException) { null } else null
         if (json != null && json.keys().asSequence().any { it.startsWith("category:") || it in listOf("modules", "external_sources") }) {
-            return catalog(origin, initialText = trimmed)
+            return@withContext catalog(origin, initialText = trimmed)
         }
         if (json != null) {
             val target = json.optString("download", json.optString("url"))
             if (target.isBlank()) throw ModuleException(ModuleFailure.UNSUPPORTED)
-            val (source, address) = http.document(ModuleHttpClient.resolveUrl(target, origin))
-            val manifest = runtime.inspect(source, address)
-            return ModuleImport.Provider(ModuleDocument(source, address, manifest, origin.ifBlank { address }), replacementId)
+            val (source, address) = http.source(ModuleHttpClient.resolveUrl(target, origin))
+            val prepared = prepare(source, address, replacementId, visited + origin, depth + 1)
+            return@withContext if (prepared is ModuleImport.Provider) prepared.copy(document = prepared.document.copy(updateUrl = origin.ifBlank { address })) else prepared
         }
         val manifest = runtime.inspect(text, origin)
-        return ModuleImport.Provider(ModuleDocument(text, origin, manifest), replacementId)
+        ModuleImport.Provider(ModuleDocument(text, origin, manifest), replacementId)
     }
 
     private suspend fun change(replacement: ModuleRegistry? = null, transform: (ModuleRegistry) -> ModuleRegistry) = withContext(Dispatchers.IO) {
@@ -335,19 +345,6 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
             if (manifest.settings.any { !validValue(it, values[it.key] ?: it.defaultJson) }) throw ModuleException(ModuleFailure.INVALID_CONFIGURATION)
         }
 
-        fun validValue(field: ModuleSetting, json: String): Boolean = try {
-            val value = parseJsonValue(json)
-            val minimum = field.minimum
-            val maximum = field.maximum
-            if (value == JSONObject.NULL) !field.required else if (field.required && value.toString().isBlank()) false else when (field.type) {
-                ModuleSettingType.TEXT, ModuleSettingType.PASSWORD -> value is String
-                ModuleSettingType.BOOLEAN -> value is Boolean
-                ModuleSettingType.NUMBER -> value is Number && value.toDouble().isFinite() &&
-                    (!field.integerOnly || value.toDouble() % 1.0 == 0.0) &&
-                    (minimum == null || value.toDouble() >= minimum) && (maximum == null || value.toDouble() <= maximum)
-                ModuleSettingType.SELECT -> field.options.any { equivalentJsonValue(it.valueJson, json) }
-                ModuleSettingType.UNSUPPORTED -> !field.required
-            }
-        } catch (_: org.json.JSONException) { false }
+        fun validValue(field: ModuleSetting, json: String): Boolean = field.acceptsValue(json)
     }
 }
