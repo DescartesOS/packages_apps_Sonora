@@ -35,7 +35,7 @@
     <img src="https://img.shields.io/github/license/rukamori/ArchiveTune?style=for-the-badge&color=6366f1&labelColor=1e1e2e" alt="License" />
     <a href="https://www.virustotal.com/gui/file/176bea37aff02a606d04ff0a61478fabdb0bd079f9e97319645452af420e5d84/detection/f-176bea37aff02a606d04ff0a61478fabdb0bd079f9e97319645452af420e5d84-1778840479" target="_blank"><img src="https://img.shields.io/badge/VirusTotal-SAFE-green?style=for-the-badge&logo=virustotal&logoColor=white&labelColor=1e1e2e&color=5865F2" alt="VirusTotal" /></a>
     <a href="https://t.me/ArchiveTuneGC"><img src="https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram" /></a>
-    <a href="https://discord.gg/XF2fpb9rTq"><img src="https://img.shields.io/discord/1498315636714115224?style=for-the-badge&logo=discord&logoColor=ffffff&label=Discord&labelColor=6366f1&color=6366f1" alt="Discord" /></a>
+    <a href="https://discord.gg/archivetune"><img src="https://img.shields.io/discord/1498315636714115224?style=for-the-badge&logo=discord&logoColor=ffffff&label=Discord&labelColor=6366f1&color=6366f1" alt="Discord" /></a>
   </div>
 
 <br />
@@ -233,7 +233,7 @@ ArchiveTune supports `.arch` provider packages installed from a file, a direct U
   <tbody>
     <tr>
       <td align="center">
-        <a href="https://discord.gg/archivetune-1498315636714115224">
+        <a href="https://discord.gg/archivetune">
           <img src="https://raw.githubusercontent.com/rukamori/ArchiveTune/refs/heads/dev/assets/ArchiveTune_Early_Access_Button.png" height="65" alt="Join early access">
         </a>
       </td>
@@ -249,7 +249,7 @@ ArchiveTune supports `.arch` provider packages installed from a file, a direct U
 Join Our Telegram Channels or Discord Servers for Support and Discussion.
 
 [![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ArchiveTuneGC)
-[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/XF2fpb9rTq)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/archivetune)
 
 ---
 

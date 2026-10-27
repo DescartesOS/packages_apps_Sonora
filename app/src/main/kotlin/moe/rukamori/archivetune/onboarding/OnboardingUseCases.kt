@@ -234,7 +234,7 @@ class BuildOnboardingUiStateUseCase
                         titleResId = R.string.onboarding_community_discord_title,
                         descriptionResId = R.string.onboarding_community_telegram_desc,
                         iconResId = R.drawable.discord,
-                        url = "https://discord.gg/XF2fpb9rTq",
+                        url = "https://discord.gg/archivetune",
                     ),
                     OnboardingCommunityActionUiModel(
                         id = "telegram",

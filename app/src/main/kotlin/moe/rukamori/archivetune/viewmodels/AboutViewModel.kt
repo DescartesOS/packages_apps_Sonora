@@ -440,7 +440,7 @@ class AboutViewModel
                             id = "discord",
                             iconResId = R.drawable.discord,
                             labelResId = R.string.discord,
-                            url = "https://discord.gg/XF2fpb9rTq",
+                            url = "https://discord.gg/archivetune",
                         ),
                         AboutLinkUiModel(
                             id = "privacy_policy",
