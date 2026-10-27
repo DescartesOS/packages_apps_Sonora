@@ -47,6 +47,7 @@ class ModuleDownloadRepository @Inject constructor(
                         .put("mime", stream.mimeType).put("codecs", stream.codecs).put("bitrate", stream.bitrate)
                         .put("sampleRate", stream.sampleRate).put("length", stream.contentLength).put("expires", stream.expiresAtMs).put("variant", stream.variant)
                         .put("upstreamProvider", stream.upstreamProvider).put("upstreamId", stream.upstreamId)
+                        .put("inlineManifest", stream.inlineManifest).put("allowedDomains", JSONArray(stream.allowedDomains))
                         .put("metadata", binding.metadata?.let { track ->
                             JSONObject().put("id", track.id).put("title", track.title).put("artists", JSONArray(track.artists))
                                 .put("album", track.album).put("duration", track.durationSeconds).put("explicit", track.explicit).put("isrc", track.identifier)
@@ -77,7 +78,8 @@ class ModuleDownloadRepository @Inject constructor(
             id to ModuleAudioSelection(id, definitions.getValue(value.getString("revision")), value.getString("track"),
                 ModuleStream(value.getString("url"), headers.keys().asSequence().associateWith(headers::getString), value.getString("mime"),
                     value.getString("codecs"), value.optInt("bitrate"), value.optInt("sampleRate").takeIf { it > 0 }, value.optLong("length"),
-                    value.getLong("expires"), value.getString("variant"), value.optString("upstreamProvider"), value.optString("upstreamId")),
+                    value.getLong("expires"), value.getString("variant"), value.optString("upstreamProvider"), value.optString("upstreamId"),
+                    value.optString("inlineManifest").takeIf(String::isNotBlank), value.optJSONArray("allowedDomains").strings()),
                 value.getString("cacheKey"), value.optJSONObject("metadata")?.let { track ->
                     val artists = track.getJSONArray("artists")
                     ModuleTrack(track.getString("id"), track.getString("title"), (0 until artists.length()).map(artists::getString),

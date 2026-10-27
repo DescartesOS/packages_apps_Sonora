@@ -54,7 +54,7 @@ class ModuleCatalogReader(private val http: ModuleHttpClient) {
             val root = try { JSONObject(text) }
             catch (error: JSONException) { throw ModuleException(ModuleFailure.INVALID_DOCUMENT, error) }
             val keys = root.keys().asSequence().toList()
-            if (keys.none { it.startsWith("category:") || it == "modules" || it == "external_sources" }) {
+            if (keys.none { it.startsWith("category:") || it == "modules" || it == "external_sources" || it == "extensions" }) {
                 throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
             }
             if (depth == 0) {
@@ -69,7 +69,7 @@ class ModuleCatalogReader(private val http: ModuleHttpClient) {
                 if (items.length() > 1000) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
                 for (index in 0 until items.length()) {
                     val item = items.optJSONObject(index) ?: continue
-                    val direct = item.optString("download").ifBlank { item.optString("url") }
+                    val direct = item.optString("download").ifBlank { item.optString("download_url") }.ifBlank { item.optString("url") }
                     val file = item.optString("file")
                     val reference = direct.ifBlank {
                         val folder = item.optString("folder").trim('/')
@@ -80,16 +80,18 @@ class ModuleCatalogReader(private val http: ModuleHttpClient) {
                     }
                     val id = item.optString("id").ifBlank { download.orEmpty() }
                     if (id.isBlank()) continue
-                    val entry = ModuleCatalogEntry(id, item.optString("name", id), item.optString("version"),
+                    val checksum = item.optString("sha256")
+                    if (checksum.isNotBlank() && !Regex("[0-9a-f]{64}").matches(checksum)) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+                    val entry = ModuleCatalogEntry(id, item.optString("display_name").ifBlank { item.optString("name", id) }, item.optString("version"),
                         item.optString("author"), item.optString("description"), download,
                         providerCategory && item.optString("type", "MODULE").equals("MODULE", true) && download != null,
-                        (item.optJSONArray("labels").strings() + item.optJSONArray("tags").strings()).distinct(), item.optJSONArray("capabilities").strings())
+                        (item.optJSONArray("labels").strings() + item.optJSONArray("tags").strings()).distinct(), item.optJSONArray("capabilities").strings(), checksum)
                     entries.putIfAbsent(download ?: "$entryBase#$id", entry)
                     if (entries.size > 1000) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
                 }
             }
 
-            keys.filter { it.startsWith("category:") || it == "modules" }.forEach { key ->
+            keys.filter { it.startsWith("category:") || it == "modules" || it == "extensions" }.forEach { key ->
                 root.optJSONArray(key)?.let { append(it, key !in listOf("category:artworks", "category:testing")) }
             }
             val external = root.optJSONArray("external_sources") ?: JSONArray()

@@ -43,7 +43,10 @@ object ModulePackageReader {
                     val limit = when (entry.name) {
                         "manifest.json" -> MANIFEST_LIMIT
                         "provider.js" -> SCRIPT_LIMIT
+                        "index.js" -> SCRIPT_LIMIT
                         "icon.png" -> 256 * 1024
+                        "icon.jpg", "icon.jpeg" -> 256 * 1024
+                        "LICENSE", "COPYING", "NOTICE" -> 128 * 1024
                         else -> invalid("ENTRY")
                     }
                     if (entry.isDirectory || entry.name in files || entry.size > limit) invalid("ENTRY")
@@ -56,6 +59,8 @@ object ModulePackageReader {
         }
         ensureActive()
         val manifestBytes = files["manifest.json"] ?: invalid("MANIFEST_MISSING")
+        if ("index.js" in files) return@withContext ModuleExtensionReader.read(files, manifest(manifestBytes))
+        if (files.keys.any { it !in setOf("manifest.json", "provider.js", "icon.png") }) invalid("ENTRY")
         val scriptBytes = files["provider.js"] ?: invalid("SCRIPT_MISSING")
         try {
             val root = manifest(manifestBytes)
@@ -65,6 +70,12 @@ object ModulePackageReader {
             if (root.optString("entry") != "provider.js") invalid("ENTRY")
             checksum(scriptBytes, root.opt("sha256"), "CHECKSUM")
             val metadata = root.getJSONObject("module")
+            if (root.optString("runtime") == "extension") {
+                if (metadata.has("icon")) checksum(files["icon.png"] ?: invalid("ICON"), root.opt("iconSha256"), "ICON_CHECKSUM")
+                else if ("icon.png" in files || root.has("iconSha256")) invalid("ICON")
+                return@withContext ModuleExtensionReader.read(files, metadata, arch = true, appVersion = appVersion)
+            }
+            if (root.has("runtime") && root.optString("runtime") != "archivetune") invalid("RUNTIME")
             for (key in listOf("signedSession", "permissions", "serviceHealth", "searchBehavior", "urlHandler")) {
                 if (metadata.has(key)) throw ModuleException(ModuleFailure.UNSUPPORTED, stage = ModuleLoadStage.MANIFEST, diagnosticCode = "ARCH_UNSUPPORTED_$key")
             }
@@ -113,7 +124,7 @@ object ModulePackageReader {
                 $script
                     })();
                     const provider = module.exports;
-                    const metadata = $metadata;
+                    const metadata = JSON.parse(${JSONObject.quote(metadata.toString())});
                     const known = ${JSONArray(capabilities)};
                     if (!provider || typeof provider !== 'object' || Array.isArray(provider)) throw new TypeError('Invalid provider export');
                     const actual = known.filter(key => typeof provider[key] === 'function');
@@ -139,7 +150,7 @@ object ModulePackageReader {
         if (actual != expected) throw ModuleException(ModuleFailure.INTEGRITY, stage = ModuleLoadStage.DECODE, diagnosticCode = "ARCH_$code")
     }
 
-    private fun normalizeSettings(metadata: JSONObject) {
+    internal fun normalizeSettings(metadata: JSONObject) {
         val fields = when (val raw = metadata.opt("settings")) {
             null -> JSONObject()
             is JSONObject -> raw
@@ -182,7 +193,7 @@ object ModulePackageReader {
         metadata.put("settings", fields)
     }
 
-    private fun manifest(bytes: ByteArray): JSONObject {
+    internal fun manifest(bytes: ByteArray): JSONObject {
         val text = utf8(bytes).removePrefix("\uFEFF")
         try {
             JsonReader(StringReader(text)).use { reader ->
@@ -209,7 +220,7 @@ object ModulePackageReader {
         return JSONObject(text)
     }
 
-    private fun utf8(bytes: ByteArray): String = try {
+    internal fun utf8(bytes: ByteArray): String = try {
         Charsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
             .decode(ByteBuffer.wrap(bytes)).toString()
     } catch (error: CharacterCodingException) {

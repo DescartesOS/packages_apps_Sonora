@@ -426,7 +426,7 @@ private fun ModuleCatalogDetails(detail: ModuleCatalogDetailUi, model: ModuleSet
 @Composable
 private fun ModuleCatalogEntry(entry: ModuleCatalogEntryUi, index: Int, count: Int, model: ModuleSettingsUiModel, onAction: (ModuleSettingsAction) -> Unit) {
     val toggle = remember(entry.key, onAction) { { onAction(ModuleSettingsAction.ToggleEntry(entry.key)) } }
-    val install: () -> Unit = remember(entry.download, onAction) { { entry.download?.let { onAction(ModuleSettingsAction.Install(it)) } } }
+    val install: () -> Unit = remember(entry.download, entry.sha256, onAction) { { entry.download?.let { onAction(ModuleSettingsAction.Install(it, entry.sha256)) } } }
     val loading = entry.download != null && model.busy == entry.download
     SegmentedListItem(
         onClick = toggle,

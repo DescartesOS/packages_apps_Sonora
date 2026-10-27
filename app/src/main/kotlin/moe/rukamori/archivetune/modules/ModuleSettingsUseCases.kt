@@ -38,10 +38,18 @@ class ModuleSettingsUseCases @Inject constructor(
         repository.metadata(id, ModuleMetadata(name.trim(), author.trim(), description.trim()))
     }
     suspend fun file(uri: Uri) = repository.importFile(uri)
-    suspend fun url(value: String) = repository.importUrl(value)
+    suspend fun url(value: String, sha256: String = "") = repository.importUrl(value, expectedDigest = sha256)
     suspend fun catalog(value: String, id: String?) = repository.catalog(value, id)
     suspend fun refresh(id: String) = repository.refreshCatalog(id)
     suspend fun commit(value: ModuleImport) = repository.commit(value)
+    suspend fun authorize(id: String): String? = repository.authorize(id).also {
+        if (it == null) resolver.invalidateFailures(id)
+    }
+    suspend fun completeAuthorization(callback: String) {
+        val id = repository.completeAuthorization(callback)
+        resolver.invalidateFailures(id)
+        check(id)
+    }
 
     fun qualityTags(labels: List<String>, settings: List<ModuleSetting> = emptyList()): List<ModuleQualityTag> {
         val declarations = labels + settings.filter { field ->
@@ -59,10 +67,10 @@ class ModuleSettingsUseCases @Inject constructor(
     private fun qualityValue(value: String): String = try { parseJsonValue(value) as? String ?: "" }
     catch (_: org.json.JSONException) { "" }
 
-    suspend fun update(id: String): ModuleImport.Provider? {
+    suspend fun update(id: String, sha256: String = ""): ModuleImport.Provider? {
         val module = repository.snapshot().modules.first { it.id == id }
         if (module.updateUrl.isBlank()) return null
-        val proposed = repository.importUrl(module.updateUrl, id) as? ModuleImport.Provider
+        val proposed = repository.importUrl(module.updateUrl, id, sha256) as? ModuleImport.Provider
             ?: throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
         return proposed.takeIf { it.document.source != module.source }
     }

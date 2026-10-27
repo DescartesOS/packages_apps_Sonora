@@ -19,7 +19,7 @@ import struct
 import sys
 import tempfile
 import textwrap
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 import zipfile
 import zlib
 
@@ -28,6 +28,7 @@ LIMITS = {"manifest.json": 128 * 1024, "provider.js": 3 * 1024 * 1024, "icon.png
 PACKAGE_LIMIT = 4 * 1024 * 1024
 CAPABILITIES = ("searchTracks", "getTrackStreamUrl", "getAlbum", "getArtist", "getPlaylist")
 FEATURES = ("fetch@1", "settings@1", "streamResolution@1", "packagedIcon@1", "qualityOptions@1")
+EXTENSION_FEATURES = ("signedSession@3", "sessionGrant@1", "downloadSegments@1", "preparedContext@1")
 TYPES = {
     "text": "text", "string": "text", "url": "text", "password": "text",
     "number": "number", "integer": "number", "boolean": "boolean", "switch": "boolean",
@@ -140,7 +141,7 @@ def string_list(value, field, issues, allow_string=False):
     return value
 
 
-def validate_settings(module, issues):
+def validate_settings(module, issues, extension=False):
     raw, fields = module.get("settings", {}), {}
     if isinstance(raw, list):
         for index, field in enumerate(raw):
@@ -189,6 +190,8 @@ def validate_settings(module, issues):
             issue(issues, path, "Use a field object with a nonblank key of at most 128 characters")
             continue
         raw_type = field.get("type", "text")
+        if extension and raw_type == "button" and not field.get("required"):
+            continue
         kind = TYPES.get(raw_type.lower()) if isinstance(raw_type, str) else None
         if kind is None:
             issue(issues, path + ".type", "Unsupported setting type")
@@ -259,13 +262,69 @@ def validate(manifest, entries, issues, app_version=None, verify_hashes=False):
     for key, expected in (("format", "archivetune.module"), ("formatVersion", 1), ("apiVersion", 1), ("entry", "provider.js")):
         if type(manifest.get(key)) is not type(expected) or manifest.get(key) != expected:
             issue(issues, key, f"Expected {json.dumps(expected)}")
+    runtime = manifest.get("runtime", "archivetune")
+    if runtime not in ("archivetune", "extension"):
+        issue(issues, "runtime", "Use archivetune or extension")
+    extension = runtime == "extension"
     module = manifest.get("module")
     if not isinstance(module, dict):
         issue(issues, "module", "An object containing provider metadata is required")
         return []
     for key in ("signedSession", "permissions", "serviceHealth", "searchBehavior", "urlHandler", "iconBase64"):
-        if key in module:
+        if key in module and (not extension or key == "iconBase64"):
             issue(issues, "module." + key, "This declaration is not supported in an authoring manifest")
+    if extension:
+        permissions = module.get("permissions", {})
+        if not isinstance(permissions, dict):
+            issue(issues, "module.permissions", "Use a permissions object")
+            permissions = {}
+        network = permissions.get("network", [])
+        if not isinstance(network, list) or len(network) > 128 or any(not isinstance(domain, str) or len(domain) > 253 or not re.fullmatch(r"(?:\*\.)?[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?", domain) for domain in network):
+            issue(issues, "module.permissions.network", "Use at most 128 domain names, optionally prefixed with *.")
+            network = []
+        for key in ("storage", "file"):
+            if key in permissions and type(permissions[key]) is not bool:
+                issue(issues, "module.permissions." + key, "Use true or false")
+        if "signedSession" in module:
+            config = module["signedSession"]
+            if not isinstance(config, dict):
+                issue(issues, "module.signedSession", "Use a signed-session configuration object")
+            else:
+                try:
+                    base = urlsplit(config.get("baseUrl", ""))
+                    valid = base.scheme == "https" and base.hostname and base.username is None and not base.query and not base.fragment and not re.search(r"\s", config.get("baseUrl", ""))
+                    allowed = any(base.hostname == domain.lower() or (domain.startswith("*.") and base.hostname.endswith(domain[1:].lower())) for domain in network) if valid else False
+                except (TypeError, ValueError, AttributeError):
+                    valid, allowed = False, False
+                if not valid or not allowed:
+                    issue(issues, "module.signedSession.baseUrl", "Use an HTTPS base URL included in the network permissions")
+                if not isinstance(config.get("namespace"), str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", config["namespace"]):
+                    issue(issues, "module.signedSession.namespace", "Use a namespace with letters, digits, dots, underscores, and hyphens")
+                window = config.get("timeWindowSeconds", 300)
+                if type(window) is not int or not 1 <= window <= 86400:
+                    issue(issues, "module.signedSession.timeWindowSeconds", "Use an integer from 1 to 86400")
+                for key in ("appVersion", "platform", "schemeLabel", "headerPrefix"):
+                    value = config.get(key)
+                    if (key == "schemeLabel" or key in config) and (not isinstance(value, str) or not value.strip() or len(value) > 256 or any(ord(char) < 32 or ord(char) > 126 for char in value)):
+                        issue(issues, "module.signedSession." + key, "Use 1–256 printable ASCII characters")
+                prefix = config.get("headerPrefix", "X-Sig-")
+                if not isinstance(prefix, str) or not re.fullmatch(r"[A-Za-z0-9-]+", prefix):
+                    issue(issues, "module.signedSession.headerPrefix", "Use an HTTP header prefix with letters, digits, and hyphens")
+                endpoints = config.get("endpoints", {})
+                if not isinstance(endpoints, dict):
+                    issue(issues, "module.signedSession.endpoints", "Use an endpoint object")
+                else:
+                    for key in ("bootstrap", "challenge", "exchange", "refresh"):
+                        if key in endpoints and (not isinstance(endpoints[key], str) or len(endpoints[key]) > 2048 or (key != "refresh" and not endpoints[key].strip())):
+                            issue(issues, "module.signedSession.endpoints." + key, "Use a nonblank endpoint of at most 2048 characters; refresh may be empty")
+                        elif key in endpoints and endpoints[key].strip() and valid:
+                            try:
+                                target = urlsplit(urljoin(base.geturl().rstrip('/') + '/', endpoints[key].lstrip('/')))
+                                same_origin = target.scheme == "https" and target.hostname == base.hostname and (target.port or 443) == (base.port or 443) and target.username is None and not re.search(r"\s", endpoints[key])
+                            except ValueError:
+                                same_origin = False
+                            if not same_origin:
+                                issue(issues, "module.signedSession.endpoints." + key, "Keep signed-session endpoints on the HTTPS base URL's origin")
     for key, limit in (("id", 128), ("name", 256), ("version", 128), ("displayName", 256), ("author", LIMITS["manifest.json"]),
                        ("description", 8192), ("license", 256), ("homepage", 2048), ("repository", 2048), ("minAppVersion", 20), ("qualityLabel", 256)):
         value = module.get(key, "")
@@ -290,7 +349,7 @@ def validate(manifest, entries, issues, app_version=None, verify_hashes=False):
         values = string_list(module.get(key, []), "module." + key, issues, allow_string=True)
         if key == "requiredRuntimeFeatures":
             for feature in values:
-                if feature not in FEATURES:
+                if feature not in (EXTENSION_FEATURES if extension else FEATURES):
                     issue(issues, "module.requiredRuntimeFeatures", f"Unsupported host feature: {feature}")
     capabilities = string_list(module.get("capabilities", []), "module.capabilities", issues)
     if len(set(capabilities)) != len(capabilities) or any(item not in CAPABILITIES for item in capabilities) or not set(CAPABILITIES[:2]).issubset(capabilities):
@@ -323,7 +382,7 @@ def validate(manifest, entries, issues, app_version=None, verify_hashes=False):
         for name, key in (("provider.js", "sha256"), ("icon.png", "iconSha256")):
             if name in entries and hashlib.sha256(entries[name]).hexdigest() != manifest.get(key):
                 issue(issues, key, f"Checksum does not match {name}")
-    return validate_settings(module, issues)
+    return validate_settings(module, issues, extension)
 
 
 def prepare(directory, draft=None, app_version=None):
@@ -363,8 +422,9 @@ def assess(manifest, entries, issues, origin, app_version=None, verify_hashes=Fa
                 "minAppVersion", "type", "labels", "tags", "capabilities", "requiredRuntimeFeatures"):
         value = module.get(key, "")
         metadata[key] = value if isinstance(value, str) or (isinstance(value, list) and all(isinstance(item, str) for item in value)) else "<invalid>"
+    runtime = manifest.get("runtime", "archivetune") if isinstance(manifest, dict) else "<invalid>"
     report = {"operation": "validate", "status": "error" if any(item["level"] == "error" for item in issues) else "valid",
-              "source": str(origin), "targetAppVersion": app_version, "metadata": metadata,
+              "source": str(origin), "targetAppVersion": app_version, "runtime": runtime if isinstance(runtime, str) else "<invalid>", "metadata": metadata,
               "settings": settings, "files": [{"name": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()} for name, data in files.items()],
               "ignoredFiles": ignored or [], "issues": issues, "runtimeVerification": "not_performed", "runtimeNote": RUNTIME_NOTE}
     return report, files
@@ -461,7 +521,7 @@ def show_report(report):
     heading({"created": "PACKAGE CREATED", "error": "VALIDATION FAILED", "valid": "LOCAL VALIDATION PASSED"}[report["status"]])
     metadata = report["metadata"]
     rows([(key, metadata[key]) for key in ("id", "displayName", "name", "version", "author", "description", "homepage", "repository", "license", "icon", "minAppVersion") if metadata.get(key)])
-    rows([("source", report["source"]), ("target app", report["targetAppVersion"] or "Not supplied; app-version compatibility not checked")])
+    rows([("source", report["source"]), ("runtime", report["runtime"]), ("target app", report["targetAppVersion"] or "Not supplied; app-version compatibility not checked")])
     for key in ("type", "labels", "tags", "capabilities", "requiredRuntimeFeatures"):
         if metadata.get(key):
             rows([(key, metadata[key])])
@@ -519,11 +579,11 @@ def input_path(prompt, default=""):
 
 def edit_metadata(manifest):
     module = manifest["module"]
-    fields = ("id", "name", "displayName", "version", "author", "description", "homepage", "repository", "license", "minAppVersion",
+    fields = ("runtime", "id", "name", "displayName", "version", "author", "description", "homepage", "repository", "license", "minAppVersion",
               "type", "labels", "capabilities", "requiredRuntimeFeatures", "icon")
     heading("Edit provider metadata")
     for index, key in enumerate(fields, 1):
-        rows([(str(index) + ". " + key, module.get(key, "(not set)"))])
+        rows([(str(index) + ". " + key, manifest.get(key, "archivetune") if key == "runtime" else module.get(key, "(not set)"))])
     selected = input("Field number, or Enter to return: ").strip()
     if not selected:
         return
@@ -535,27 +595,33 @@ def edit_metadata(manifest):
         print("Enter comma-separated values.")
     if key == "icon":
         print("Use icon.png after placing the PNG in the workspace; '-' removes the declaration.")
+    if key == "runtime":
+        print("Use archivetune for module.exports, or extension for registerExtension.")
     value = input(key + ": ").strip()
+    target = manifest if key == "runtime" else module
     if value == "-":
-        module.pop(key, None)
+        target.pop(key, None)
     elif value:
-        module[key] = [part.strip() for part in value.split(",") if part.strip()] if key in ("type", "labels", "capabilities", "requiredRuntimeFeatures") else value
+        target[key] = [part.strip() for part in value.split(",") if part.strip()] if key in ("type", "labels", "capabilities", "requiredRuntimeFeatures") else value
 
 
 def edit_configuration(manifest):
     keys = ("settings", "qualityOptions", "defaultQuality", "qualityLabel")
+    if manifest.get("runtime") == "extension":
+        keys += ("permissions", "signedSession")
     heading("Edit configuration declarations")
-    print("1. settings     2. qualityOptions     3. defaultQuality     4. qualityLabel")
+    for index, key in enumerate(keys, 1):
+        print(f"  {index}. {key}")
     print("Declare provider options here, not personal account credentials.")
     selected = input("Field number, or Enter to return: ").strip()
     if not selected:
         return
-    if selected not in ("1", "2", "3", "4"):
+    if not selected.isdigit() or not 1 <= int(selected) <= len(keys):
         raise ValueError("Choose one of the listed field numbers")
     key = keys[int(selected) - 1]
     if key == "settings":
         issues = []
-        show_settings(validate_settings(manifest["module"], issues))
+        show_settings(validate_settings(manifest["module"], issues, manifest.get("runtime") == "extension"))
         if issues:
             show_issues(issues)
     else:

@@ -55,6 +55,7 @@ data class ModuleManifest(
     val minAppVersion: String = "",
     val requiredRuntimeFeatures: List<String> = emptyList(),
     val icon: ByteString? = null,
+    val authentication: Boolean = false,
 ) {
     companion object {
         fun parse(value: JSONObject): ModuleManifest {
@@ -96,6 +97,7 @@ data class ModuleManifest(
                 value.optString("displayName"), projectUrl(value, "homepage"), projectUrl(value, "repository"), value.optString("license"),
                 stringList(value, "type"), value.optString("minAppVersion"), stringList(value, "requiredRuntimeFeatures"),
                 value.optString("iconBase64").takeIf(String::isNotBlank)?.let(::moduleIcon),
+                value.optBoolean("authentication"),
             ).also {
                 if (it.id.isBlank() || it.name.isBlank() || !it.capabilities.containsAll(listOf("searchTracks", "getTrackStreamUrl"))) {
                     throw ModuleException(ModuleFailure.UNSUPPORTED)
@@ -169,6 +171,8 @@ data class ModuleStream(
     val variant: String,
     val upstreamProvider: String = "",
     val upstreamId: String = "",
+    val inlineManifest: String? = null,
+    val allowedDomains: List<String> = emptyList(),
 )
 
 data class ModuleDocument(val source: String, val origin: String, val manifest: ModuleManifest, val updateUrl: String = origin)
@@ -198,6 +202,7 @@ data class ModuleCatalogEntry(
     val supported: Boolean,
     val labels: List<String>,
     val capabilities: List<String> = emptyList(),
+    val sha256: String = "",
 )
 
 fun JSONArray?.strings(): List<String> = if (this == null) emptyList() else

@@ -160,13 +160,12 @@ arbitrary file paths, and additional assets are not supported.
 
 ### Relationship to other extension manifests
 
-These fields cover descriptive metadata and quality configuration. A Mornye
-manifest is not directly installable as `.arch`: ArchiveTune still requires its
-package envelope, stable `id`, and callable capability-name array. Mornye-style
-`signedSession`, `permissions`, `serviceHealth`, `searchBehavior`, and `urlHandler`
-declarations are rejected rather than silently granting unsupported behavior.
-This format provides no file/storage permissions, native segment downloader,
-signed-session API, URL registration, or music discovery destinations.
+The default `.arch` runtime uses `module.exports` and the API documented below.
+Packages can select the `extension` compatibility runtime, which uses
+`registerExtension(...)` and a separate synchronous host API. Unmodified
+extension packages and raw manifest URLs have their own import path, they do not
+need conversion to `.arch`. See [Extension compatibility](#extension-compatibility)
+for package, authentication, and transfer behavior.
 
 Supported capability names are `searchTracks`, `getTrackStreamUrl`, `getAlbum`,
 `getArtist`, and `getPlaylist`. Only the first two are called by automatic audio
@@ -480,8 +479,8 @@ The studio provides these actions:
 | Action | Behavior |
 | --- | --- |
 | Review and validate | Displays provider identity, compatibility requirements, input files, hashes, typed settings, option descriptions, excluded files, and field-specific findings. |
-| Edit metadata | Edits identity, display name, version, author, description, project links, license, categories, labels, capabilities, runtime requirements, and optional icon declaration. |
-| Edit settings / quality | Replaces a declaration using a JSON value or `@path/to/value.json`. Settings previews mask sensitive defaults. Use `-` to remove a declaration. |
+| Edit metadata | Edits runtime selection, identity, display name, version, author, description, project links, license, categories, labels, capabilities, runtime requirements, and optional icon declaration. |
+| Edit settings / quality | Replaces a declaration using a JSON value or `@path/to/value.json`. The extension profile also exposes permissions and signed-session configuration. Settings previews mask sensitive defaults. Use `-` to remove a declaration. |
 | Save manifest | Validates manifest declarations and explicitly saves the draft atomically. This action does not require the provider script or icon to exist yet, packaging checks those files separately. A file changed by another editor requires confirmation before replacement. |
 | Package .arch | Validates the current draft and actual files, asks for an output path, confirms writes/replacements, and produces a package report. |
 | Inspect an .arch file | Checks archive entries, size limits, manifest declarations, script encoding, icon headers/dimensions, and stored checksums without extracting files or executing JavaScript. |
@@ -646,6 +645,12 @@ and redacted codes, arbitrary provider exception messages are not displayed.
 | `ARCH_APP_VERSION`, `ARCH_RUNTIME_FEATURE` | The installed ArchiveTune build must satisfy the declared minimum version and every required host feature. |
 | `ARCH_QUALITY_OPTIONS` | Remove duplicate quality declarations, check unique typed IDs and that the default matches an option. |
 | `ARCH_UNSUPPORTED_…` | Remove declarations for host behavior this runtime does not implement, descriptive metadata does not activate those APIs. |
+| `EXT_RUNTIME_FEATURE_…`, `EXT_PLAYBACK_PROVIDER` | The extension needs an unavailable host feature or lacks the playback-provider contract. Metadata-only extensions cannot supply automatic audio. |
+| `EXT_NETWORK_PERMISSION` | Include the service, verification, and media domains in the extension's network declaration. Redirect destinations also need permission. |
+| `EXT_INITIALIZATION_IO` | Move network requests out of top-level registration and into initialization or a provider method. Import inspection performs no network I/O. |
+| `SESSION_VERIFICATION_REQUIRED` | Open installed module details and choose **Verify connection**. |
+| `EXT_SESSION_SCHEME` | Declare the service's signing-protocol identifier in `signedSession.schemeLabel`. |
+| `SESSION_CALLBACK_STATE`, `SESSION_CALLBACK_EXPIRED` | Start verification again from that module's settings. A callback must match a pending, unexpired state. |
 | Provider TypeError during installation | Export an object and implement exactly the declared known capabilities. |
 | Ready | Initialization/configuration succeeded, this does not prove search or audio access. |
 | No acceptable match | Inspect recording title, artists, duration, explicit metadata, and whether results are actually empty. |
@@ -656,6 +661,133 @@ For actual playback, initialization and playback outcomes are recorded
 separately. A successful health check does not erase the last failed playback
 outcome. Use the module's **Copy diagnostics** action when reporting an issue,
 do not attach account tokens or signed stream URLs publicly.
+
+## Extension compatibility
+
+This runtime loads single-file JavaScript extensions that use
+`registerExtension(...)` and a separate `manifest.json`.
+It adapts playback providers to ArchiveTune's existing automatic audio
+resolution. It does not add music search, home feeds, URL handlers, or new
+browsing destinations to the application.
+
+### Installation formats
+
+- Import a compatible ZIP-based extension package through **Settings → Modules →
+  Add → Import file**, or supply its direct download URL. The extension needs
+  root `manifest.json` and `index.js`. Optional root PNG/JPEG icons and the
+  `LICENSE`, `COPYING`, and `NOTICE` files are accepted. Archives are read in
+  memory without extracting paths into the application's filesystem.
+- A raw manifest URL can load its adjacent `index.js` and declared icon. A
+  standalone JavaScript file cannot supply the separate extension manifest.
+- Add a raw `registry.json` URL as a catalog. The `extensions`, `download_url`,
+  `display_name`, and optional `sha256` fields are recognized. Catalog refresh
+  changes metadata only. A declared package digest must match before staging
+  installation.
+- Playback requires registered `searchTracks` and `download` functions.
+  Metadata-only, lyrics-only, post-processing-only, and V3 account-pool
+  extensions are not playback providers for this runtime.
+
+The archive and input bounds remain 4 MiB total, 128 KiB for the manifest,
+3 MiB for JavaScript, and 256 KiB for each icon. Icon dimensions must be within
+1–1024 pixels. JPEG display icons are converted to PNG internally and must
+also fit the PNG size bound. Unsafe paths, duplicate entries, invalid metadata,
+and unknown required runtime features reject the staged import.
+
+An imported extension's `minAppVersion` refers to its originating host. It is retained as
+extension data, not compared numerically with ArchiveTune's version. Required
+runtime features determine host compatibility. This implementation recognizes
+`signedSession@3`, `sessionGrant@1`, `downloadSegments@1`, and
+`preparedContext@1`, `apiV3@1` is not implemented.
+
+### Authoring a compatible `.arch`
+
+Use the existing `.arch` envelope, checksums, `provider.js`, stable module ID,
+and capability-name array. Add the top-level field `"runtime": "extension"` and
+write `registerExtension(...)` in the entry script. The declared capabilities
+describe the resulting ArchiveTune provider: `searchTracks`,
+`getTrackStreamUrl`, and any registered optional album/artist/playlist methods.
+The adapter supplies `getTrackStreamUrl` from the extension's `download` method.
+
+Select the runtime in the packager's **Edit metadata** action. **Edit settings /
+quality** then exposes `permissions` and `signedSession` declarations as well.
+The default `archivetune` runtime retains the `module.exports` contract and
+does not acquire these APIs. `.arch` minimum-version checks still refer to
+ArchiveTune even when the extension runtime is selected.
+
+### Execution and host bindings
+
+| API or contract | ArchiveTune behavior |
+| --- | --- |
+| `registerExtension(object)` | Exactly one registration with callable track-search and download methods is required. |
+| `initialize(settings)` | Receives flat, typed setting values. Initialization runs when that engine's configuration changes, a returned `false` fails the operation. |
+| `searchTracks(query, limit)` | Results are mapped from extension fields such as `name`, `artists`, `album_name`, and `duration_ms` before the existing recording matcher runs. |
+| `download(id, quality, outputPath, onProgress, options)` | Runs in transfer-resolution mode. The host captures the first file-transfer request and stops the extension's download pipeline there. No successful file download or local output path is fabricated. |
+| `http.get/head/delete(url, headers)` | Synchronous, cancellable HTTP with status, body, final URL, headers, and permission checks. Nested `headers`/`params` options are accepted for GET helpers. |
+| `http.post/put/patch(url, body, headers)` | String bodies are preserved, object bodies are JSON encoded. Content type defaults to JSON when a body is present. |
+| `http.request(url, options)` | Generic synchronous request with `method`, `headers`, and `body`. |
+| `fetch(url, options)` | Synchronous response contract with `text()`, `json()`, `arrayBuffer()`, status, and headers. Awaiting these returned values also works. The default `.arch` runtime keeps its asynchronous fetch API. |
+| `http.clearCookies()` | Clears that installation's cookie jar. Cookies are isolated from application and YouTube accounts. |
+| `storage.get/set/remove/clear/keys` | Per-installation typed values, limited to 1 MiB and encrypted with an Android Keystore key. Requires `permissions.storage`. Import inspection uses disposable memory storage and permits no network requests. |
+| `utils` | SHA-256/SHA-1/MD5 digests, UTF-8 Base64, JSON helpers, UUIDs, app version/user agent, bounded sleep, remaining resolution time, and cancellation state. `randomUserAgent()` uses the application's user agent. |
+| `matching.compareStrings/compareDuration` | Normalized token similarity and duration proximity helpers. ArchiveTune's independent recording matcher remains the acceptance boundary. |
+| `session` | Host-owned signed requests, authentication status, and session clearing. Browser grants are completed through the application's callback, not by handing a session secret to JavaScript. |
+
+The existing URL, headers, encoding, typed-array, timer, and cancellation
+bindings remain available. Synchronous requests execute away from the main
+thread. Cancellation closes active requests and timers, the existing 15-second
+provider and 30-second module-sequence playback budgets still apply.
+
+`permissions.network` accepts exact domains and `*.domain` subdomains. It is
+enforced on initial requests, redirects, manifests, and media requests. A
+wildcard does not include the bare domain. Signed requests do not follow
+redirects. Settings, HTTP bodies, cookies, and credentials are not shared with
+YouTube. Optional settings buttons and discovery/URL declarations are retained
+as provider data without adding application actions or destinations.
+
+### Tidal verification and media transfer
+
+For a signed-session provider, open its installed module details and choose
+**Verify connection**. The host requests bootstrap state using the declared
+namespace, service base URL, app-version scope, platform, and endpoint paths.
+Signed-session manifests must declare `signedSession.schemeLabel` using the
+protocol identifier supplied by their service. The host uses that value exactly,
+it does not substitute the application name or supply a default scheme label.
+If verification is required, it opens the service's HTTPS challenge with an
+ArchiveTune callback. The return must contain exactly one matching unexpired
+state and a grant or code. The host exchanges the grant and stores the session
+secret encrypted. Requests use the declared HMAC-SHA256 scheme, rolling time
+window, nonce, timestamp, and body digest. Expiring sessions use the declared
+refresh endpoint. A gateway-invalidated session requires verification again.
+
+Pending callbacks expire after three minutes. Repeated or unrelated callbacks
+cannot complete a cleared session. Callback grants, signed-session records,
+cookies, and extension storage are excluded from portable and Android backups.
+Removing the module removes its runtime storage. A health check reports missing
+verification as configuration-required instead of reporting the provider ready.
+
+`file.download` hands its direct URL and request headers to the existing
+playback/download system. `file.downloadSegments` uses the original DASH or HLS
+manifest observed during resolution, including manifests decoded from an API's
+Base64 `manifest` field. Segment URLs without a corresponding original manifest
+are rejected, timing information is not guessed from a list of URLs. Requires
+`permissions.file`. Headers and extension cookies remain available to native
+manifest, segment, and key requests.
+
+Tidal's standalone-file export can convert FLAC carried in MP4 into a `.flac`
+file. ArchiveTune's playback and offline downloads use Media3's container
+extraction and cache instead: the compressed audio stays in its original
+container, with no conversion of the audio samples. The adapter stops before
+file tagging and standalone-file conversion. It does not expose arbitrary
+filesystem access, FFmpeg commands, external `gobackend` account APIs, OAuth
+account-management APIs, or post-processing hooks. Such requirements are not
+general-purpose host capabilities here.
+
+The module's declared quality options and defaults own quality selection.
+YouTube audio quality, Wi-Fi/mobile preferences, and low-data quality changes
+are never passed to extension initialization or download resolution. A
+successful import or verification does not prove a particular service response,
+recording match, device codec, or actual lossless encoding, check those in the
+target app/device before publishing compatibility claims.
 
 ## Release checklist
 

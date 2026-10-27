@@ -1,7 +1,7 @@
 globalThis.console = Object.freeze({log(){},info(){},warn(){},error(){},debug(){}});
 globalThis.Headers = class Headers {
   constructor(init = {}) {
-    this.values = {};
+    this.values = Object.create(null);
     if (init instanceof Headers) init = init.values;
     if (Array.isArray(init)) init.forEach(([k,v]) => this.set(k,v));
     else Object.keys(init).forEach(k => this.set(k,init[k]));

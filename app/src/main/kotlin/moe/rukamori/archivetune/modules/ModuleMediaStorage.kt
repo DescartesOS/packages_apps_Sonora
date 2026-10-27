@@ -10,6 +10,9 @@ package moe.rukamori.archivetune.modules
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.ByteArrayDataSource
+import androidx.media3.datasource.TransferListener
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSource
@@ -95,7 +98,7 @@ class ModuleMediaStorage @Inject constructor(
         return CacheDataSource.Factory().setCache(if (download) downloadCache else playerCache)
             .setCacheKeyFactory(CacheKeyFactory { dataSpec ->
                 if (!segmented(selection)) selection.cacheKey else {
-                    if (session.isRoot(dataSpec.uri.toString())) "${selection.cacheKey}:manifest" else {
+                    if (session.isRoot(dataSpec.uri.toString())) session.manifestCacheKey(renew = !offline) else {
                         val hash = MessageDigest.getInstance("SHA-256").digest(dataSpec.uri.toString().toByteArray())
                             .joinToString("") { "%02x".format(it.toInt() and 255) }
                         "${selection.cacheKey}:$hash"
@@ -103,7 +106,20 @@ class ModuleMediaStorage @Inject constructor(
                 }
             }).apply {
                 if (offline) { setUpstreamDataSourceFactory(null); setCacheWriteDataSinkFactory(null) }
-                else setUpstreamDataSourceFactory(ResolvingDataSource.Factory(OkHttpDataSource.Factory(client), session::resolve))
+                else {
+                    val permitted = selection.stream.allowedDomains.takeIf { it.isNotEmpty() }?.let { domains ->
+                        val policy = ModuleNetworkPermissions(domains)
+                        client.newBuilder().cookieJar(moduleStreamCookieJar(context, selection.module.id)).addNetworkInterceptor { chain ->
+                            try { policy.requireAllowed(chain.request().url.toString()) }
+                            catch (error: ModuleException) { throw java.io.IOException("Module network permission denied", error) }
+                            chain.proceed(chain.request())
+                        }.build()
+                    } ?: client
+                    val network = OkHttpDataSource.Factory(permitted)
+                    setUpstreamDataSourceFactory(ResolvingDataSource.Factory(DataSource.Factory {
+                        InlineManifestDataSource(network, session::manifest)
+                    }, session::resolve))
+                }
                 if (!download && context.isLowDataModeActive()) setCacheWriteDataSinkFactory(null)
             }
     }
@@ -115,6 +131,16 @@ class ModuleMediaStorage @Inject constructor(
         private var consumers = 0
 
         fun isRoot(url: String): Boolean = url == initial.stream.url || url == current.stream.url
+
+        fun manifest(url: String): ByteArray? = if (isRoot(url)) current.stream.inlineManifest?.toByteArray(Charsets.UTF_8) else null
+
+        fun manifestCacheKey(renew: Boolean): String {
+            val selected = if (renew && current.stream.inlineManifest != null && current.stream.expiresAtMs <= System.currentTimeMillis() + 5_000) renewed() else current
+            val inline = selected.stream.inlineManifest ?: return "${initial.cacheKey}:manifest"
+            val digest = MessageDigest.getInstance("SHA-256").digest(inline.toByteArray(Charsets.UTF_8))
+                .joinToString("") { "%02x".format(it.toInt() and 255) }
+            return "${initial.cacheKey}:manifest:$digest"
+        }
 
         fun resolve(spec: DataSpec): DataSpec {
             val root = isRoot(spec.uri.toString())
@@ -159,4 +185,26 @@ class ModuleMediaStorage @Inject constructor(
 
     private fun segmented(selection: ModuleAudioSelection): Boolean = selection.stream.mimeType.substringBefore(';').lowercase(java.util.Locale.ROOT) in
         listOf("application/x-mpegurl", "application/vnd.apple.mpegurl", "application/dash+xml")
+}
+
+private class InlineManifestDataSource(
+    private val network: DataSource.Factory,
+    private val manifest: (String) -> ByteArray?,
+) : DataSource {
+    private var active: DataSource? = null
+    private val listeners = ArrayList<TransferListener>()
+    override fun addTransferListener(transferListener: TransferListener) {
+        if (transferListener !in listeners) { listeners.add(transferListener); active?.addTransferListener(transferListener) }
+    }
+    override fun open(dataSpec: DataSpec): Long {
+        check(active == null)
+        val source = manifest(dataSpec.uri.toString())?.let(::ByteArrayDataSource) ?: network.createDataSource()
+        active = source
+        listeners.forEach(source::addTransferListener)
+        return source.open(dataSpec)
+    }
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int = checkNotNull(active).read(buffer, offset, length)
+    override fun getUri(): android.net.Uri? = active?.uri
+    override fun getResponseHeaders(): Map<String, List<String>> = active?.responseHeaders.orEmpty()
+    override fun close() { val source = active; active = null; source?.close() }
 }

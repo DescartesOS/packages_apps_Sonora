@@ -104,7 +104,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
 
     suspend fun removeModule(id: String) {
         change { it.copy(modules = it.modules.filterNot { module -> module.id == id }) }
-        runtime.unload(id)
+        runtime.forget(id)
     }
 
     suspend fun removeCatalog(id: String) = change { it.copy(catalogs = it.catalogs.filterNot { catalog -> catalog.id == id }) }
@@ -129,8 +129,13 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         prepare(bytes, "", null)
     }
 
-    suspend fun importUrl(url: String, replacementId: String? = null): ModuleImport = try {
+    suspend fun importUrl(url: String, replacementId: String? = null, expectedDigest: String = ""): ModuleImport = try {
+        if (expectedDigest.isNotBlank() && !Regex("[0-9a-f]{64}").matches(expectedDigest)) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
         val (bytes, origin) = http.source(url.trim())
+        if (expectedDigest.isNotBlank()) {
+            val actual = java.security.MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 255) }
+            if (actual != expectedDigest) throw ModuleException(ModuleFailure.INTEGRITY, stage = ModuleLoadStage.DOWNLOAD, diagnosticCode = "CATALOG_CHECKSUM")
+        }
         val prepared = prepare(bytes, origin, replacementId)
         if (prepared is ModuleImport.Provider) prepared.copy(document = prepared.document.copy(updateUrl = ModuleHttpClient.webUrl(url.trim()))) else prepared
     } catch (error: CancellationException) { throw error }
@@ -182,6 +187,22 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
     suspend fun check(module: InstalledModule) {
         validateConfiguration(module.manifest, module.configuration)
         runtime.inspect(module.source, module.origin)
+        if (module.manifest.authentication) runtime.checkAuthorization(module.id, module.source, module.origin)
+    }
+
+    suspend fun authorize(id: String): String? {
+        val module = snapshot().modules.first { it.id == id }
+        return runtime.authorize(id, module.source, module.origin)
+    }
+
+    suspend fun completeAuthorization(callback: String): String {
+        for (module in snapshot().modules.filter { it.manifest.authentication }) {
+            if (runtime.completeAuthorization(module.id, module.source, module.origin, callback)) {
+                runtime.unload(module.id)
+                return module.id
+            }
+        }
+        throw ModuleException(ModuleFailure.INVALID_CONFIGURATION, stage = ModuleLoadStage.PROVIDER, diagnosticCode = "SESSION_CALLBACK_STATE")
     }
 
     suspend fun exportPortable(): ByteArray {
@@ -207,11 +228,21 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         val text = bytes.toString(Charsets.UTF_8)
         val trimmed = text.removePrefix("\uFEFF").trim()
         val json = if (trimmed.startsWith("{")) try { JSONObject(trimmed) } catch (_: org.json.JSONException) { null } else null
-        if (json != null && json.keys().asSequence().any { it.startsWith("category:") || it in listOf("modules", "external_sources") }) {
+        if (json != null && json.keys().asSequence().any { it.startsWith("category:") || it in listOf("modules", "external_sources", "extensions") }) {
             return@withContext catalog(origin, initialText = trimmed)
         }
         if (json != null) {
-            val target = json.optString("download", json.optString("url"))
+            if (ModuleExtensionReader.isManifest(json)) {
+                val base = origin.takeIf(String::isNotBlank) ?: throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+                val files = mutableMapOf("index.js" to http.source(ModuleHttpClient.resolveUrl("index.js", base)).first)
+                json.optString("icon").takeIf(String::isNotBlank)?.let { icon ->
+                    if (icon !in setOf("icon.png", "icon.jpg", "icon.jpeg")) throw ModuleException(ModuleFailure.INVALID_DOCUMENT)
+                    files[icon] = http.source(ModuleHttpClient.resolveUrl(icon, base)).first
+                }
+                val source = ModuleExtensionReader.read(files, json)
+                return@withContext ModuleImport.Provider(ModuleDocument(source, origin, runtime.inspect(source, origin)), replacementId)
+            }
+            val target = json.optString("download").ifBlank { json.optString("download_url") }.ifBlank { json.optString("url") }
             if (target.isBlank()) throw ModuleException(ModuleFailure.UNSUPPORTED)
             val (source, address) = http.source(ModuleHttpClient.resolveUrl(target, origin))
             val prepared = prepare(source, address, replacementId, visited + origin, depth + 1)
@@ -263,7 +294,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
                     .put("entries", JSONArray().apply { catalog.entries.forEach { entry ->
                         put(JSONObject().put("id", entry.id).put("name", entry.name).put("version", entry.version).put("author", entry.author)
                             .put("description", entry.description).put("download", entry.downloadUrl).put("supported", entry.supported).put("labels", JSONArray(entry.labels))
-                            .put("capabilities", JSONArray(entry.capabilities)))
+                            .put("capabilities", JSONArray(entry.capabilities)).put("sha256", entry.sha256))
                     } }))
             }
         })
@@ -295,7 +326,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
                     val entry = entries.getJSONObject(position)
                     ModuleCatalogEntry(entry.getString("id"), entry.getString("name"), entry.optString("version"), entry.optString("author"),
                         entry.optString("description"), entry.optString("download").takeIf { it.isNotBlank() && it != "null" }, entry.optBoolean("supported"), entry.optJSONArray("labels").strings(),
-                        entry.optJSONArray("capabilities").strings())
+                        entry.optJSONArray("capabilities").strings(), entry.optString("sha256"))
                 })
         }, root.optString("revision", UUID.randomUUID().toString())).also { registry ->
             if ((!allowRepeatedInstallations && registry.modules.distinctBy { it.id }.size != registry.modules.size) ||
@@ -308,7 +339,7 @@ class ModuleRepository @Inject constructor(@ApplicationContext private val conte
         .put("description", manifest.description).put("labels", JSONArray(manifest.labels)).put("capabilities", JSONArray(manifest.capabilities))
         .put("displayName", manifest.displayName).put("homepage", manifest.homepage).put("repository", manifest.repository).put("license", manifest.license)
         .put("type", JSONArray(manifest.types)).put("minAppVersion", manifest.minAppVersion).put("requiredRuntimeFeatures", JSONArray(manifest.requiredRuntimeFeatures))
-        .put("iconBase64", manifest.icon?.base64())
+        .put("iconBase64", manifest.icon?.base64()).put("authentication", manifest.authentication)
         .put("settings", JSONObject().apply {
             manifest.settings.forEach { field -> put(field.key, JSONObject().put("label", field.label).put("description", field.description)
                 .put("type", if (field.integerOnly) "integer" else field.type.name.lowercase(java.util.Locale.ROOT)).put("defaultValue", parseJsonValue(field.defaultJson)).put("required", field.required)

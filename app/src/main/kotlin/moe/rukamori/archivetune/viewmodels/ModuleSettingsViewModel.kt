@@ -57,7 +57,8 @@ data class ModuleCatalogRowUi(val id: String, val name: String, val origin: Stri
 
 @Immutable
 data class ModuleCatalogEntryUi(val key: String, val name: String, val subtitle: String, val description: String,
-    val supported: Boolean, val installed: Boolean, val capabilities: ImmutableList<Int>, val download: String?, val expanded: Boolean, val qualityTags: ImmutableList<Int>, val icon: ByteString? = null)
+    val supported: Boolean, val installed: Boolean, val capabilities: ImmutableList<Int>, val download: String?, val expanded: Boolean, val qualityTags: ImmutableList<Int>, val icon: ByteString? = null,
+    val sha256: String = "")
 
 @Immutable
 data class ModuleOperationFailureUi(@param:StringRes val stage: Int, val code: String)
@@ -76,7 +77,8 @@ data class ModuleFieldUi(val key: String, val label: String, val description: St
 @Immutable
 data class ModuleDetailUi(val row: ModuleRowUi, val description: String, val origin: String,
     val capabilities: ImmutableList<Int>, val fields: ImmutableList<ModuleFieldUi>, val qualityDeclared: Boolean,
-    val dirty: Boolean, val initialization: ModuleDiagnosticUi?, val playback: ModuleDiagnosticUi?, val information: ImmutableList<ModuleInfoUi>)
+    val dirty: Boolean, val initialization: ModuleDiagnosticUi?, val playback: ModuleDiagnosticUi?, val information: ImmutableList<ModuleInfoUi>,
+    val authentication: Boolean)
 
 @Immutable
 data class ModuleDiagnosticUi(@param:StringRes val status: Int, val time: String, val elapsedMs: Long,
@@ -124,9 +126,10 @@ sealed interface ModuleSettingsAction {
     data class Move(val id: String, val delta: Int) : ModuleSettingsAction
     data class Remove(val id: String, val catalog: Boolean) : ModuleSettingsAction
     data class Check(val id: String? = null) : ModuleSettingsAction
+    data class Authorize(val id: String) : ModuleSettingsAction
     data class Update(val id: String? = null) : ModuleSettingsAction
     data class Refresh(val id: String) : ModuleSettingsAction
-    data class Install(val url: String) : ModuleSettingsAction
+    data class Install(val url: String, val sha256: String = "") : ModuleSettingsAction
     data class ToggleEntry(val key: String) : ModuleSettingsAction
     data object FailureDetails : ModuleSettingsAction
     data class Field(val key: String, val value: String) : ModuleSettingsAction
@@ -285,6 +288,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
         if (action == ModuleSettingsAction.CommitOrder && draftOrder == null) return
         busy = when (action) {
             is ModuleSettingsAction.Check -> action.id ?: "all"
+            is ModuleSettingsAction.Authorize -> action.id
             is ModuleSettingsAction.Update -> action.id ?: "all"
             is ModuleSettingsAction.Refresh -> action.id
             is ModuleSettingsAction.Install -> action.url
@@ -308,7 +312,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                     ModuleSettingsAction.SubmitUrl -> pending = if (dialog == ModuleSettingsDialog.CATALOG_URL) useCases.catalog(url, targetId) else useCases.url(url)
                     is ModuleSettingsAction.Install -> {
                         val existing = registry.modules.firstOrNull { it.origin == action.url || it.updateUrl == action.url }
-                        pending = if (existing == null) useCases.url(action.url) else useCases.update(existing.id)
+                        pending = if (existing == null) useCases.url(action.url, action.sha256) else useCases.update(existing.id, action.sha256)
                         if (pending == null) message = R.string.modules_no_updates
                     }
                     is ModuleSettingsAction.SetEnabled -> useCases.setEnabled(action.value)
@@ -322,6 +326,11 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                     is ModuleSettingsAction.Check -> {
                         val ids = action.id?.let(::listOf) ?: registry.modules.filter { it.enabled }.map { it.id }
                         ids.forEach { useCases.check(it) }
+                    }
+                    is ModuleSettingsAction.Authorize -> {
+                        val address = useCases.authorize(action.id)
+                        if (address == null) message = R.string.modules_session_connected
+                        else eventChannel.send(ModuleSettingsEvent.OpenLink(address))
                     }
                     is ModuleSettingsAction.Update -> {
                         val ids = action.id?.let(::listOf) ?: registry.modules.filter { it.updateUrl.isNotBlank() }.map { it.id }
@@ -358,10 +367,12 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                 val stage = moduleError?.stage ?: when (action) {
                     is ModuleSettingsAction.Install, ModuleSettingsAction.SubmitUrl, is ModuleSettingsAction.Update -> ModuleLoadStage.DOWNLOAD
                     is ModuleSettingsAction.FileSelected -> ModuleLoadStage.DECODE
+                    is ModuleSettingsAction.Authorize -> ModuleLoadStage.PROVIDER
                     else -> ModuleLoadStage.STORAGE
                 }
                 val type = chain.last().javaClass.simpleName.replace(Regex("[^A-Za-z0-9_$]"), "").take(80)
-                val code = "stage=${stage.name}; failure=${moduleError?.failure?.name ?: "UNEXPECTED"}; exception=$type"
+                val detail = moduleError?.diagnosticCode?.replace(Regex("[^A-Za-z0-9@._/-]"), "_")?.take(128).orEmpty()
+                val code = "stage=${stage.name}; failure=${moduleError?.failure?.name ?: "UNEXPECTED"}; exception=$type; code=$detail"
                 operationFailure = ModuleOperationFailureUi(stageResource(stage), code)
                 timber.log.Timber.tag("Modules").w("Operation failed: %s", code)
                 message = if (action == ModuleSettingsAction.CommitOrder) R.string.modules_order_failed else failureResource(moduleError ?: error)
@@ -414,7 +425,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                         ImmutableList.copyOf(field.options.map { ModuleOptionUi(it.label, it.valueJson, it.description) }),
                         selectedOption?.label.orEmpty())
                 }), item.manifest.settings.any { it.key.contains("quality", true) }, draft != item.configuration,
-                diagnostic.check?.let(::diagnosticUi), diagnostic.playback?.let(::diagnosticUi), information(item.manifest))
+                diagnostic.check?.let(::diagnosticUi), diagnostic.playback?.let(::diagnosticUi), information(item.manifest), item.manifest.authentication)
         }
         val catalog = registry.catalogs.firstOrNull { it.id == selectedId }?.let { item ->
             ModuleCatalogDetailUi(catalogs.first { it.id == item.id }, ImmutableList.copyOf(item.entries.map { entry ->
@@ -423,7 +434,7 @@ class ModuleSettingsViewModel @Inject constructor(private val useCases: ModuleSe
                 ModuleCatalogEntryUi(entry.downloadUrl ?: entry.id, entry.name, listOf(entry.author, entry.version).filter(String::isNotBlank).joinToString(" \u00b7 "),
                     entry.description, supported, installed != null,
                     capabilities(installed?.manifest?.capabilities ?: entry.capabilities), entry.downloadUrl, (entry.downloadUrl ?: entry.id) in expandedEntries,
-                    if (supported) qualityTags(entry.labels + installed?.manifest?.labels.orEmpty(), installed?.manifest?.settings.orEmpty()) else ImmutableList.of(), installed?.manifest?.icon)
+                    if (supported) qualityTags(entry.labels + installed?.manifest?.labels.orEmpty(), installed?.manifest?.settings.orEmpty()) else ImmutableList.of(), installed?.manifest?.icon, entry.sha256)
             }.sortedByDescending { it.installed }))
         }
         val review = when (val value = pending) {

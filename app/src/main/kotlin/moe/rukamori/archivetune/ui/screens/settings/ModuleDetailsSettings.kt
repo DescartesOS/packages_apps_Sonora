@@ -132,6 +132,11 @@ internal fun ModuleDetails(detail: ModuleDetailUi, model: ModuleSettingsUiModel,
             }
         }
         item(key = "diagnostics_header", contentType = "heading") { ModuleSectionHeading(R.string.modules_diagnostics) }
+        if (detail.authentication) item(key = "authorization", contentType = "action_row") {
+            ModuleActionRow(R.string.modules_session_verify, R.drawable.login, 0, 1,
+                enabled = model.busy == null && !detail.dirty,
+                onClick = remember(detail.row.id, onAction) { { onAction(ModuleSettingsAction.Authorize(detail.row.id)) } })
+        }
         item(key = "initialization", contentType = "diagnostic") {
             ModuleDiagnosticPanel(R.string.modules_initialization, detail.initialization, 0, 2)
         }
