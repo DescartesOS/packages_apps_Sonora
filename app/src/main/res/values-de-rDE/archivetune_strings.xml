@@ -356,13 +356,7 @@
     <string name="top_artists">Top Künstler</string>
     <string name="share_summary">Zusammenfassung teilen</string>
     <string name="no_listening_data">Keine Daten für dieses Jahr</string>
-    <string name="year_in_music_recap">Musikrückblick</string>
-    <string name="year_in_music_recap_word">RÜCKBLICK</string>
-    <string name="year_in_music_intro_hero">Es ist da! Dein Jahr in Musik.</string>
-    <string name="year_in_music_intro_details">Offenbare deine beliebtesten Songs, Interpreten, Alben und deine Hörzeit.</string>
-    <string name="year_in_music_swipe_begin">Wische zum Beginnen</string>
     <string name="year_in_music_top_track">Dein Toptitel</string>
-    <string name="year_in_music_musical_passport">Mein musikalischer Reisepass</string>
     <string name="year_in_music_empty_title">Noch gibt es nichts zum Zurückblicken</string>
     <string name="year_in_music_empty_subtitle">Spiele während %d noch mehr Musik, dann wird dein Rückblick hier angezeigt.</string>
     <string name="year_in_music_minutes_label">Hörzeit</string>
@@ -547,11 +541,9 @@
     <string name="stats_show_all_songs">Alle %1$d Songs anzeigen</string>
     <string name="stats_top_songs">Top-Songs</string>
     <string name="stats_peak_hour">Meistaktiv: %s</string>
-    <string name="year_in_music_ranked_albums">Alben, zu denen du zurückgekehrt bist</string>
     <string name="release_type_album">Album</string>
     <string name="release_type_single">Single</string>
     <string name="release_metadata">%1$s • %2$d</string>
-    <string name="year_in_music_current_card">Karte teilen</string>
     <string name="stats_time_range">Zeitspanne</string>
     <string name="storage_cache_clear_failed">Cache konnte nicht geleert werden. Überprüfe den SD-Kartenzugriff.</string>
     <string name="aod_customize_show_time_labels">Zeitbeschriftungen anzeigen</string>

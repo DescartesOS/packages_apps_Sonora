@@ -321,7 +321,6 @@
     <string name="ai_provider_settings">Fournisseur</string>
     <string name="ai_model_fetch_hint">Appuyez sur « Actualiser » pour charger les modèles disponibles</string>
     <string name="import_csv_format">Fichier de playlist CSV</string>
-    <string name="year_in_music_recap_word">RÉSUMÉ</string>
     <string name="ai_api_key">Clé API</string>
     <string name="music_recognition_history_no_results_body">Essayez un autre morceau, un autre artiste, un autre album ou un autre code.</string>
     <string name="about_lead_developer">Développeur principal</string>
@@ -352,7 +351,6 @@
     <string name="ai_api_key_configured">Configuré</string>
     <string name="ai_api_connected">Connecté via l\'API</string>
     <string name="music_recognition_history_search">Rechercher des titres reconnus</string>
-    <string name="year_in_music_top_pick">Notre coup de cœur</string>
     <string name="aod_shape_arch">Arche</string>
     <string name="aod_customize_sample_album">Sessions « Always On »</string>
     <string name="aod_shape_flower">Fleur</string>
@@ -387,7 +385,6 @@
     <string name="year_in_music_minutes_label">Durée d\'écoute</string>
     <string name="storage_folder_invalid">Sélectionnez un dossier valide.</string>
     <string name="aod_background_pure_black">Noir pur</string>
-    <string name="year_in_music_musical_passport">Mon passeport musical</string>
     <string name="music_recognition_history_empty_body">Les titres correspondants s\'afficheront ici une fois la reconnaissance effectuée.</string>
     <string name="aod_shape_ghostish">Fantomatique</string>
     <string name="storage_location_removable_named">Carte SD %s</string>
@@ -422,7 +419,6 @@
     <string name="ai_custom_endpoint">Point de terminaison personnalisé</string>
     <string name="ai_model_api_key_required">Une clé API est requise pour charger les modèles</string>
     <string name="music_recognition_history_no_results_title">Aucun historique correspondant</string>
-    <string name="year_in_music_totals_title">Vous avez fait vivre la musique</string>
     <string name="aod_customize_show_controls">Afficher les commandes</string>
     <string name="news_error_desc">Vérifiez votre connexion Internet et réessayez.</string>
     <string name="spotify_not_connected">Spotify n\'est pas connecté</string>
@@ -441,7 +437,6 @@
     <string name="storage_folder">Dossier de stockage</string>
     <string name="internal_service">Service interne</string>
     <string name="spotify_show_playlist_desc">Afficher les playlists Spotify dans la bibliothèque.</string>
-    <string name="year_in_music_ranked_artists">Les artistes que vous écoutez en boucle</string>
     <string name="backup_create_backup_desc">Exporter la bibliothèque, les paramètres et les informations de compte.</string>
     <string name="local_songs_scan_included_folders_add">Inclure un dossier</string>
     <string name="aod_customize_control_style">Style de contrôle</string>
@@ -457,13 +452,11 @@
     <string name="playlist_sync_failed">Échec de la synchronisation de la playlist : %1$s</string>
     <string name="storage_location_sheet_title">Lieu de stockage</string>
     <string name="music_recognition_history_empty_title">Aucun titre n\'a encore été reconnu</string>
-    <string name="year_in_music_ranked_albums">Les albums que vous avez réécoutés</string>
     <string name="ai_api_status_unknown">Non testé</string>
     <string name="about_content_desc_website">Site web</string>
     <string name="new_releases">Nouveautés</string>
     <string name="aod_customize_background_style">Style d\'arrière-plan</string>
     <string name="news_author_on_date">%1$s · %2$s</string>
-    <string name="year_in_music_recap">Récapitulatif Musical</string>
     <string name="news_loading">Chargement des actualités…</string>
     <string name="about_content_desc_github">GitHub</string>
     <string name="ai_translation_menu">Traduction par IA</string>
@@ -478,7 +471,6 @@
     <string name="settings_content_subtitle">Langue, pays et paramètres de recommandation par défaut</string>
     <string name="ai_fetch_models">Récupérer les modèles</string>
     <string name="aod_customize_entry_desc">Personnaliser l\'écran du lecteur toujours actif</string>
-    <string name="year_in_music_intro_hero">Le voici enfin ! Votre bilan musical de l\'année.</string>
     <string name="year_in_music_empty_title">Rien à résumer pour l\'instant</string>
     <string name="spotify_loading_library">Chargement de la bibliothèque Spotify</string>
     <string name="local_songs_scan_included_folders_title">Dossiers inclus</string>
@@ -491,7 +483,6 @@
     <string name="storage_size_ratio">%1$s / %2$s</string>
     <string name="login_success">Connexion réussie</string>
     <string name="aod_shape_slanted">Incliné</string>
-    <string name="year_in_music_current_card">Partager la fiche</string>
     <string name="settings_behavior_subtitle">Historique, paramètres par défaut et paramètres de confidentialité</string>
     <string name="ai_api_test_failed">Échec du test de l\'API</string>
     <string name="lyrics_share_style_album_tint">Teinte de l\'album</string>
@@ -518,14 +509,12 @@
     <string name="aod_customize_sample_elapsed">1:24</string>
     <string name="mini_player_background_style">Style d\'arrière-plan du mini-lecteur</string>
     <string name="settings_account_subtitle">Se connecter et gérer la synchronisation du compte</string>
-    <string name="year_in_music_swipe_begin">Faites glisser pour commencer</string>
     <string name="aod_shape_soft_burst">Explosion douce</string>
     <string name="storage_folder_pick">Choisissez un dossier</string>
     <string name="ai_model_search">Modèles de recherche</string>
     <string name="force_sync_on_switch_account_desc">Resynchroniser les playlists, les titres favoris, les artistes et les albums du compte sélectionné après le changement de compte</string>
     <string name="spotify_no_tracks">Aucun titre Spotify trouvé.</string>
     <string name="android_auto_sort_playlist">Trier la playlist</string>
-    <string name="year_in_music_intro_details">Découvrez vos titres, artistes et albums préférés, ainsi que le temps que vous passez à les écouter.</string>
     <string name="spotify_no_sources">Aucune playlist Spotify trouvée</string>
     <string name="storage_location_removable">Carte SD</string>
     <string name="aod_control_tonal">Tonale</string>

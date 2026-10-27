@@ -1032,6 +1032,10 @@ class MainActivity : ComponentActivity() {
                             ?.getString(OnlineSearchResultArgument)
                     var onlineSearchSort by rememberSaveable { mutableStateOf(OnlineSearchSort.DEFAULT) }
                     val isYearInMusicScreen = currentRoute?.startsWith("year_in_music") == true
+                    val isYearInMusicStory = if (isYearInMusicScreen) {
+                        navBackStackEntry?.savedStateHandle?.getStateFlow("recap_immersive", false)
+                            ?.collectAsStateWithLifecycle()?.value == true
+                    } else false
 
                     val navigationItems =
                         remember(isTvDevice) {
@@ -1271,7 +1275,7 @@ class MainActivity : ComponentActivity() {
                     var yearInMusicSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
 
                     val shouldHideStatusBars =
-                        isYearInMusicScreen ||
+                        (isYearInMusicScreen && isYearInMusicStory) ||
                             (playerBottomSheetState.isExpandedOrExpanding &&
                                 playerDesignStyle == PlayerDesignStyle.V7)
 
