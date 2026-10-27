@@ -181,7 +181,7 @@ class BottomSheetState(
             val isRestingAtOldCollapsed = !animatable.isRunning &&
                 (animatable.value - collapsedBoundState.value).let { if (it < 0.dp) -it else it } < 0.5.dp
             if (!isRestingAtOldCollapsed) {
-                coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+                coroutineScope.launch {
                     animatable.animateTo(clampedTarget, lastAnimationSpec)
                 }
             }
@@ -229,7 +229,7 @@ class BottomSheetState(
     }
 
     val isCollapsed by derivedStateOf {
-        value == collapsedBound
+        value == this.collapsedBound
     }
 
     val isExpanded by derivedStateOf {
@@ -240,7 +240,7 @@ class BottomSheetState(
         get() = targetAnchor == EXPANDED_ANCHOR
 
     val progress by derivedStateOf {
-        1f - (animatable.upperBound!! - animatable.value) / (animatable.upperBound!! - collapsedBound)
+        1f - (animatable.upperBound!! - animatable.value) / (animatable.upperBound!! - this.collapsedBound)
     }
 
     private fun updateAnchor(anchor: Int) {
@@ -251,7 +251,7 @@ class BottomSheetState(
     fun collapse(animationSpec: AnimationSpec<Dp>) {
         updateAnchor(COLLAPSED_ANCHOR)
         lastAnimationSpec = animationSpec
-        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+        coroutineScope.launch {
             animatable.animateTo(targetCollapsedBound, animationSpec)
         }
     }
@@ -259,7 +259,7 @@ class BottomSheetState(
     fun expand(animationSpec: AnimationSpec<Dp>) {
         updateAnchor(EXPANDED_ANCHOR)
         lastAnimationSpec = animationSpec
-        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+        coroutineScope.launch {
             animatable.animateTo(animatable.upperBound!!, animationSpec)
         }
     }
@@ -284,7 +284,7 @@ class BottomSheetState(
         updateAnchor(DISMISSED_ANCHOR)
         val spec = if (animationsDisabled) snap() else BottomSheetAnimationSpec
         lastAnimationSpec = spec
-        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
+        coroutineScope.launch {
             animatable.animateTo(animatable.lowerBound!!, spec)
         }
     }
@@ -539,7 +539,7 @@ fun Modifier.bottomSheetDraggable(
                     }
                 } finally {
                     velocityTracker.resetTracking()
-                    if (dragStarted && !dragCompleted) {
+                    if (dragStarted && !dragCompleted && state.targetAnchor == initialAnchor) {
                         when (initialAnchor) {
                             EXPANDED_ANCHOR -> state.expandSoft()
                             COLLAPSED_ANCHOR -> state.collapseSoft()
