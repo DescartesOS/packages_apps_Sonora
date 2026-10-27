@@ -58,6 +58,19 @@
 
 <hr />
 
+> [!CAUTION]
+> **IMPERSONATION WARNING — ARCHIVETUNE IS NOT ON GOOGLE PLAY**
+>
+> **ArchiveTune has no official Google Play Store listing.** The ArchiveTune maintainers have **not published, authorized, or endorsed any application on Google Play** under the ArchiveTune name.
+>
+> Google Play listings that use the **ArchiveTune name, logo, app icon, screenshots, or other official branding** are **unofficial third-party listings**, even if they look identical to this project. They are **not verified or supported by the ArchiveTune maintainers** and should **not be mistaken for official releases**. Their contents and safety cannot be guaranteed.
+>
+> **Get the official ArchiveTune only from trusted sources:** [GitHub Releases](https://github.com/rukamori/ArchiveTune/releases/latest), [Obtainium (via the official GitHub repository)](https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/rukamori/ArchiveTune/), or Early-access builds are provided through the [official ArchiveTune Discord](https://discord.gg/archivetune).
+>
+> If you encounter a Google Play listing impersonating ArchiveTune, **report it to Google Play** and [notify the maintainers](https://github.com/rukamori/ArchiveTune/issues/new/choose).
+
+---
+
 > [!WARNING]
 **Forks are not supported in any way.**  
 We do not provide support, maintenance, troubleshooting, or assistance for any forked version of this project.
@@ -242,8 +255,8 @@ ArchiveTune supports `.arch` provider packages installed from a file, a direct U
 </table>
 </div>
 
-> [!WARNING]  
-> **Notes:** The trusted download source is listed above; we are not responsible for any risks you may encounter from downloading from other sources.
+> [!WARNING]
+> **Official downloads only:** The distribution channels listed above are the trusted sources for ArchiveTune. **No Google Play listing is an official ArchiveTune release.** Third-party uploads, including those reusing the ArchiveTune name or icon, are not verified, maintained, or supported by this project. Install applications from other sources at your own risk.
 
 ## ❓ Need Help or Have Questions?
 Join Our Telegram Channels or Discord Servers for Support and Discussion.
@@ -305,6 +318,8 @@ You may copy, modify, and redistribute the source code, including commercially, 
 Copyright © Rukamori and the ArchiveTune contributors for their respective original contributions.
 
 The **ArchiveTune™** name, logo, application icon, and official branding are not licensed under the GPLv3. Unofficial forks must not present themselves as official ArchiveTune releases or imply endorsement by the ArchiveTune maintainers.
+
+**Google Play impersonation:** The maintainers have not authorized anyone to publish an app on Google Play as an official ArchiveTune release or to reuse ArchiveTune branding in a way that falsely implies an official relationship. The right to fork or redistribute GPLv3-licensed code does **not** make an independently published app an official ArchiveTune distribution.
 
 See the [`LICENSE`](LICENSE) file for the complete GPLv3 terms.
 
