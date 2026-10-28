@@ -181,7 +181,7 @@ class BottomSheetState(
             val isRestingAtOldCollapsed = !animatable.isRunning &&
                 (animatable.value - collapsedBoundState.value).let { if (it < 0.dp) -it else it } < 0.5.dp
             if (!isRestingAtOldCollapsed) {
-                coroutineScope.launch {
+                coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
                     animatable.animateTo(clampedTarget, lastAnimationSpec)
                 }
             }
@@ -251,7 +251,7 @@ class BottomSheetState(
     fun collapse(animationSpec: AnimationSpec<Dp>) {
         updateAnchor(COLLAPSED_ANCHOR)
         lastAnimationSpec = animationSpec
-        coroutineScope.launch {
+        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
             animatable.animateTo(targetCollapsedBound, animationSpec)
         }
     }
@@ -259,7 +259,7 @@ class BottomSheetState(
     fun expand(animationSpec: AnimationSpec<Dp>) {
         updateAnchor(EXPANDED_ANCHOR)
         lastAnimationSpec = animationSpec
-        coroutineScope.launch {
+        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
             animatable.animateTo(animatable.upperBound!!, animationSpec)
         }
     }
@@ -284,7 +284,7 @@ class BottomSheetState(
         updateAnchor(DISMISSED_ANCHOR)
         val spec = if (animationsDisabled) snap() else BottomSheetAnimationSpec
         lastAnimationSpec = spec
-        coroutineScope.launch {
+        coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
             animatable.animateTo(animatable.lowerBound!!, spec)
         }
     }
