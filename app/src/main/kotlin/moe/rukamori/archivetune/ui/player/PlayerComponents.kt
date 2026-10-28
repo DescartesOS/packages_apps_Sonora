@@ -4981,7 +4981,7 @@ fun V10PlayerContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 20.dp, end = 20.dp, bottom = 8.dp)
-                    .pointerInput(Unit) {
+                    .pointerInput(onQueueClick) {
                         detectVerticalDragGestures { change, dragAmount ->
                             if (dragAmount < -15) {
                                 change.consume()
@@ -4992,6 +4992,15 @@ fun V10PlayerContent(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                V10ToggleButton(
+                    checked = false,
+                    onClick = onQueueClick,
+                    accent = accent,
+                    field = field,
+                    iconResId = R.drawable.queue_music,
+                    contentDescription = stringResource(R.string.queue),
+                )
+
                 // Like Button
                 V10ToggleButton(
                     checked = liked,
