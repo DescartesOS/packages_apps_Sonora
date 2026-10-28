@@ -22,7 +22,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -39,15 +37,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -64,19 +58,15 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -103,17 +93,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.window.core.layout.WindowSizeClass
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.launch
 import moe.rukamori.archivetune.BuildConfig
 import moe.rukamori.archivetune.LocalPlayerAwareWindowInsets
 import moe.rukamori.archivetune.R
-import moe.rukamori.archivetune.ui.component.BottomSheetPage
-import moe.rukamori.archivetune.ui.component.BottomSheetPageState
 import moe.rukamori.archivetune.ui.component.IconButton
-import moe.rukamori.archivetune.ui.component.MarkdownText
 import moe.rukamori.archivetune.ui.utils.appBarScrollBehavior
 import moe.rukamori.archivetune.ui.utils.backToMain
-import moe.rukamori.archivetune.utils.AppUpdateInstaller
 import moe.rukamori.archivetune.utils.GitCommit
 import moe.rukamori.archivetune.utils.Updater
 import moe.rukamori.archivetune.utils.reportException
@@ -124,19 +109,17 @@ import moe.rukamori.archivetune.viewmodels.UpdateSettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateScreen(
     navController: NavController,
-    onUpToDate: () -> Unit = {},
+    latestVersion: String?,
     viewModel: UpdateSettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val scrollBehavior = appBarScrollBehavior()
-    val coroutineScope = rememberCoroutineScope()
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val useWideLayout =
         windowSizeClass.isWidthAtLeastBreakpoint(
@@ -159,7 +142,6 @@ fun UpdateScreen(
     val onUpdateSettingsAction = remember(viewModel) { viewModel::onAction }
     var commits by remember { mutableStateOf<List<GitCommit>>(emptyList()) }
     var isLoadingCommits by remember { mutableStateOf(true) }
-    var latestVersion by remember { mutableStateOf<String?>(null) }
     var isExpanded by rememberSaveable { mutableStateOf(true) }
     var hasNotificationPermission by remember {
         mutableStateOf(
@@ -173,25 +155,8 @@ fun UpdateScreen(
             },
         )
     }
-    val isUpdateAvailable by remember(latestVersion) {
-        derivedStateOf {
-            BuildConfig.UPDATER_AVAILABLE &&
-                (latestVersion?.let { Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME) } ?: false)
-        }
-    }
-    val updateSheetState = remember { BottomSheetPageState() }
-    var updateSheetLoading by remember { mutableStateOf(false) }
-    var updateSheetVersion by remember { mutableStateOf<String?>(null) }
-    var updateSheetNotes by remember { mutableStateOf<String?>(null) }
-    var updateSheetError by remember { mutableStateOf<String?>(null) }
-    var updateSheetIsSameVersion by remember { mutableStateOf(false) }
-    var updateCheckJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    var showUpdateUpToDateDialog by remember { mutableStateOf(false) }
-    var showUpdateErrorDialog by remember { mutableStateOf(false) }
-    var updateDownloadProgress by remember { mutableStateOf<Float?>(null) }
-    var updateDownloadJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-    var showUpdateDownloadDialog by remember { mutableStateOf(false) }
-    val useInAppUpdateInstaller = BuildConfig.DISTRIBUTION == "gms"
+    val isUpdateAvailable = BuildConfig.UPDATER_AVAILABLE &&
+        (latestVersion?.let { Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME) } ?: false)
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
     val onJoinEarlyAccess = remember(onUpdateSettingsAction) {
@@ -224,142 +189,11 @@ fun UpdateScreen(
         onUpdateSettingsAction(UpdateSettingsAction.DismissError)
     }
 
-    val openUpdateUrl: (String) -> Unit = { url ->
-        try {
-            uriHandler.openUri(url)
-        } catch (_: Exception) {
-        }
-    }
-
-    val installUpdate: (String) -> Unit = { url ->
-        if (!useInAppUpdateInstaller) {
-            openUpdateUrl(url)
-        } else if (updateDownloadJob?.isActive != true) {
-            updateDownloadProgress = null
-            updateSheetError = null
-            showUpdateErrorDialog = false
-            showUpdateDownloadDialog = true
-            updateDownloadJob =
-                coroutineScope.launch {
-                    AppUpdateInstaller
-                        .downloadAndInstall(context, url) { progress ->
-                            updateDownloadProgress = progress.fraction
-                        }.onSuccess {
-                            showUpdateDownloadDialog = false
-                            snackbarHostState.showSnackbar(
-                                context.getString(R.string.download_complete),
-                            )
-                        }.onFailure { error ->
-                            showUpdateDownloadDialog = false
-                            updateSheetError = error.message ?: context.getString(R.string.error_unknown)
-                            showUpdateErrorDialog = true
-                        }
-                }
-        }
-    }
-
-    val updateSheetContent: @Composable ColumnScope.() -> Unit = {
-        Text(
-            text = stringResource(R.string.new_update_available),
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            modifier = Modifier.padding(top = 16.dp),
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ) {
-            Text(
-                text = updateSheetVersion ?: "",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-                    .verticalScroll(rememberScrollState()),
-        ) {
-            val notes = updateSheetNotes
-            if (notes != null && notes.isNotBlank()) {
-                MarkdownText(
-                    markdown = notes,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(end = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.release_notes_unavailable),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        val downloadUrl = Updater.getLatestDownloadUrl()
-
-        Button(
-            onClick = { installUpdate(downloadUrl) },
-            modifier = Modifier.fillMaxWidth(),
-            shapes = ButtonDefaults.shapes(),
-        ) {
-            Text(text = stringResource(R.string.update_text))
-        }
-
-        Spacer(Modifier.height(12.dp))
-    }
-
     val onCheckForUpdate: () -> Unit = {
-        if (updateCheckJob?.isActive != true) {
-            updateSheetLoading = true
-            updateSheetVersion = null
-            updateSheetNotes = null
-            updateSheetError = null
-            updateSheetIsSameVersion = false
-            showUpdateUpToDateDialog = false
-            showUpdateErrorDialog = false
-
-            updateCheckJob =
-                coroutineScope.launch {
-                    val releaseResult = Updater.getLatestReleaseInfo(forceRefresh = true)
-
-                    updateSheetLoading = false
-
-                    releaseResult
-                        .onSuccess { release ->
-                            val version = Updater.getReleaseVersionName(release)
-                            latestVersion = version
-                            updateSheetNotes = release.body
-                            updateSheetIsSameVersion = !Updater.isUpdateAvailable(version, BuildConfig.VERSION_NAME)
-                            updateSheetVersion = version
-
-                            if (updateSheetIsSameVersion) {
-                                showUpdateUpToDateDialog = true
-                                onUpToDate()
-                            } else {
-                                updateSheetState.show(updateSheetContent)
-                            }
-                        }.onFailure { error ->
-                            updateSheetError = error.message ?: context.getString(R.string.error_unknown)
-                            showUpdateErrorDialog = true
-                        }
-                }
+        navController.navigate("$AppUpdateRoute?forceRefresh=true") {
+            launchSingleTop = true
         }
     }
-
     val permissionLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission(),
@@ -374,14 +208,6 @@ fun UpdateScreen(
         if (!BuildConfig.UPDATER_AVAILABLE) {
             isLoadingCommits = false
             return@LaunchedEffect
-        }
-
-        val versionResult = Updater.getLatestVersionName()
-        versionResult.onSuccess {
-            latestVersion = it
-            if (!Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME)) {
-                onUpToDate()
-            }
         }
 
         Updater
@@ -514,184 +340,6 @@ fun UpdateScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        BottomSheetPage(
-            state = updateSheetState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-            contentWindowInsets = LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Bottom),
-        )
-    }
-
-    if (updateSheetLoading) {
-        AlertDialog(
-            onDismissRequest = {},
-            icon = {
-                LoadingIndicator(
-                    modifier = Modifier.size(24.dp),
-                )
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.updates_status_checking),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-            },
-            confirmButton = {},
-        )
-    }
-
-    if (showUpdateDownloadDialog) {
-        val progress = updateDownloadProgress
-        val animatedProgress by animateFloatAsState(
-            targetValue = progress ?: 0f,
-            animationSpec = WavyProgressIndicatorDefaults.ProgressAnimationSpec,
-            label = "updateDownloadProgress",
-        )
-        val centeredDialogContentModifier = remember { Modifier.fillMaxWidth() }
-        val determinateProgressModifier = remember { Modifier.size(96.dp) }
-        val determinateIndicatorModifier = remember { Modifier.fillMaxSize() }
-        val indeterminateIndicatorModifier = remember { Modifier.size(72.dp) }
-
-        val downloadTitle =
-            buildString {
-                append(context.getString(R.string.app_name))
-                append(' ')
-                append(updateSheetVersion ?: "?")
-            }
-
-        AlertDialog(
-            onDismissRequest = {},
-            title = {
-                Text(
-                    text = downloadTitle,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center,
-                    modifier = centeredDialogContentModifier,
-                )
-            },
-            text = {
-                Column(
-                    modifier = centeredDialogContentModifier,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (progress != null) {
-                        Box(
-                            modifier = determinateProgressModifier,
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularWavyProgressIndicator(
-                                progress = { animatedProgress },
-                                modifier = determinateIndicatorModifier,
-                            )
-                            Text(
-                                text =
-                                    stringResource(
-                                        R.string.download_progress_percent,
-                                        (animatedProgress * 100f).roundToInt().coerceIn(0, 100),
-                                    ),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                    } else {
-                        CircularWavyProgressIndicator(
-                            modifier = indeterminateIndicatorModifier,
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        updateDownloadJob?.cancel()
-                        updateDownloadJob = null
-                        updateDownloadProgress = null
-                        showUpdateDownloadDialog = false
-                    },
-                ) {
-                    Text(text = stringResource(android.R.string.cancel))
-                }
-            },
-        )
-    }
-
-    if (showUpdateUpToDateDialog) {
-        AlertDialog(
-            onDismissRequest = { showUpdateUpToDateDialog = false },
-            icon = {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painter = painterResource(R.drawable.check),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.updates_status_current),
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                )
-            },
-            text = {
-                Text(
-                    text = updateSheetVersion ?: BuildConfig.VERSION_NAME,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showUpdateUpToDateDialog = false }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-        )
-    }
-
-    if (showUpdateErrorDialog) {
-        AlertDialog(
-            onDismissRequest = { showUpdateErrorDialog = false },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.error),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            },
-            title = {
-                Text(
-                    text = stringResource(R.string.error_loading_changelog),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-            },
-            text = {
-                Text(
-                    text = updateSheetError ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { showUpdateErrorDialog = false }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-        )
-    }
 }
 
 @Composable
@@ -769,7 +417,7 @@ private fun UpdateStatusPanel(
 ) {
     val supportingText =
         when {
-            latestVersion == null -> stringResource(R.string.updates_status_checking)
+            latestVersion == null -> stringResource(R.string.app_update_not_checked)
             isUpdateAvailable -> stringResource(R.string.latest_version_format, latestVersion)
             else -> stringResource(R.string.updates_status_current)
         }

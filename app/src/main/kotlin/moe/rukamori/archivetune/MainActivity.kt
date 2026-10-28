@@ -53,7 +53,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -71,10 +70,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Badge
@@ -280,7 +277,6 @@ import moe.rukamori.archivetune.ui.component.FloatingNavigationToolbar
 import moe.rukamori.archivetune.ui.component.IconButton
 import moe.rukamori.archivetune.ui.component.LocalBottomSheetPageState
 import moe.rukamori.archivetune.ui.component.LocalMenuState
-import moe.rukamori.archivetune.ui.component.MarkdownText
 import moe.rukamori.archivetune.ui.component.NetworkStatusBanner
 import moe.rukamori.archivetune.ui.component.OverflowMenuDivider
 import moe.rukamori.archivetune.ui.component.StarDialog
@@ -299,6 +295,10 @@ import moe.rukamori.archivetune.ui.screens.Screens
 import moe.rukamori.archivetune.ui.screens.buildLoginRoute
 import moe.rukamori.archivetune.ui.screens.navigationBuilder
 import moe.rukamori.archivetune.ui.screens.onboarding.OnboardingRoute
+import moe.rukamori.archivetune.ui.screens.settings.AppUpdateRoute
+import moe.rukamori.archivetune.ui.screens.settings.AppUpdateScreen
+import moe.rukamori.archivetune.viewmodels.AppUpdateState
+import moe.rukamori.archivetune.viewmodels.AppUpdateViewModel
 import moe.rukamori.archivetune.ui.screens.search.LocalSearchScreen
 import moe.rukamori.archivetune.ui.screens.search.OnlineSearchResultArgument
 import moe.rukamori.archivetune.ui.screens.search.OnlineSearchResultRoutePrefix
@@ -373,7 +373,6 @@ class MainActivity : ComponentActivity() {
     private var isAodScreenOffReceiverRegistered = false
     private var pendingTogetherJoinLink: String? = null
     private var pendingBackupRestoreUri by mutableStateOf<Uri?>(null)
-    private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
     private var appLocaleInitialized by mutableStateOf(false)
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
@@ -669,6 +668,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            val automaticUpdatePromptDue = rememberSaveable {
+                System.currentTimeMillis() - Updater.lastCheckTime > 1.days.inWholeMilliseconds
+            }
+            val startupUpdateViewModel = if (BuildConfig.UPDATER_AVAILABLE) hiltViewModel<AppUpdateViewModel>() else null
+            val startupUpdateState = startupUpdateViewModel?.state?.collectAsStateWithLifecycle()?.value
+            val requiredUpdate = startupUpdateViewModel?.updateRequired?.collectAsStateWithLifecycle()?.value == true ||
+                (startupUpdateState as? AppUpdateState.Success)?.release?.isMandatory == true
+            val latestVersionName = (startupUpdateState as? AppUpdateState.Success)?.release?.version
             val updateSettingsFlow = remember(observeUpdateSettings) { observeUpdateSettings() }
             val updateSettings by
                 updateSettingsFlow.collectAsStateWithLifecycle(
@@ -723,27 +730,11 @@ class MainActivity : ComponentActivity() {
                 updateSettings?.automaticChecksEnabled,
                 updateSettings?.notificationsEnabled,
             ) {
-                val currentUpdateSettings = updateSettings ?: return@LaunchedEffect
-                if (
-                    currentUpdateSettings.automaticChecksEnabled &&
-                    BuildConfig.UPDATER_AVAILABLE &&
-                    System.currentTimeMillis() - Updater.lastCheckTime > 1.days.inWholeMilliseconds
-                ) {
-                    Updater.getLatestVersionName().onSuccess { latestVersion ->
-                        if (Updater.isUpdateAvailable(latestVersion, BuildConfig.VERSION_NAME)) {
-                            latestVersionName = latestVersion
-                        }
-                    }
-                }
-
+                if (updateSettings == null) return@LaunchedEffect
                 moe.rukamori.archivetune.utils.UpdateNotificationManager
                     .checkForUpdates(this@MainActivity)
             }
 
-            // Use remembered instances so the same state object is used everywhere
-            // (previously retrieving the composition local directly created different
-            // instances in different composition scopes which caused the update
-            // bottom sheet to not appear and overlay interactions to be blocked).
             val bottomSheetPageState =
                 remember {
                     moe.rukamori.archivetune.ui.component
@@ -754,95 +745,10 @@ class MainActivity : ComponentActivity() {
                     moe.rukamori.archivetune.ui.component
                         .MenuState()
                 }
-            val releaseNotesState = remember { mutableStateOf<String?>(null) }
-            var pendingUpdateVersion by remember { mutableStateOf<String?>(null) }
-            var updateNotesLoaded by remember { mutableStateOf(false) }
-            val updateSheetContent: @Composable ColumnScope.() -> Unit = {
-                // receiver: ColumnScope
-                Text(
-                    text = stringResource(R.string.new_update_available),
-                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                    modifier = Modifier.padding(top = 16.dp),
-                )
-
-                Spacer(Modifier.height(8.dp))
-
-                androidx.compose.material3.OutlinedButton(
-                    onClick = {},
-                    contentPadding =
-                        androidx.compose.foundation.layout.PaddingValues(
-                            horizontal = 5.dp,
-                            vertical = 5.dp,
-                        ),
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(text = latestVersionName, style = MaterialTheme.typography.labelLarge)
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    val notes = releaseNotesState.value
-                    if (notes != null && notes.isNotBlank()) {
-                        MarkdownText(
-                            markdown = notes,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(end = 8.dp),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    } else {
-                        Text(
-                            text = stringResource(R.string.release_notes_unavailable),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-
-                androidx.compose.material3.Button(
-                    onClick = {
-                        bottomSheetPageState.dismiss()
-                        this@MainActivity.navController.navigate("settings/update") {
-                            launchSingleTop = true
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(text = stringResource(R.string.update_text))
-                }
-            }
-
-            LaunchedEffect(latestVersionName) {
-                if (
-                    BuildConfig.UPDATER_AVAILABLE &&
-                    Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
-                ) {
-                    pendingUpdateVersion = latestVersionName
-                    updateNotesLoaded = false
-                    val releaseNotesResult = Updater.getLatestReleaseNotes()
-                    releaseNotesResult
-                        .onSuccess {
-                            releaseNotesState.value = it
-                        }.onFailure {
-                            releaseNotesState.value = null
-                        }
-
-                    updateNotesLoaded = true
-                } else {
-                    pendingUpdateVersion = null
-                    updateNotesLoaded = false
-                }
+            var presentedUpdateVersion by rememberSaveable { mutableStateOf<String?>(null) }
+            val pendingUpdateVersion = latestVersionName?.takeIf {
+                BuildConfig.UPDATER_AVAILABLE && automaticUpdatePromptDue && updateSettings?.automaticChecksEnabled == true &&
+                    it != presentedUpdateVersion && Updater.isUpdateAvailable(it, BuildConfig.VERSION_NAME)
             }
 
             val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
@@ -997,6 +903,20 @@ class MainActivity : ComponentActivity() {
                     return@ArchiveTuneTheme
                 }
 
+                if (requiredUpdate && startupUpdateViewModel != null) {
+                    CompositionLocalProvider(
+                        LocalPlayerAwareWindowInsets provides WindowInsets.systemBars,
+                        LocalAnimationsDisabled provides disableAnimations,
+                    ) {
+                        AppUpdateScreen(
+                            navController = navController,
+                            viewModel = startupUpdateViewModel,
+                            onReleaseChecked = { presentedUpdateVersion = it?.version },
+                        )
+                    }
+                    return@ArchiveTuneTheme
+                }
+
                 BoxWithConstraints(
                     modifier =
                         Modifier
@@ -1057,6 +977,9 @@ class MainActivity : ComponentActivity() {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val (previousTab) = rememberSaveable { mutableStateOf("home") }
                     val currentRoute = navBackStackEntry?.destination?.route
+                    val isAppUpdateScreen = currentRoute?.substringBefore('?') == AppUpdateRoute
+                    val currentNavigationLifecycle = navBackStackEntry?.lifecycle?.currentStateFlow
+                        ?.collectAsStateWithLifecycle()?.value
                     val onlineSearchEncodedQuery =
                         navBackStackEntry
                             ?.takeIf {
@@ -1649,7 +1572,7 @@ class MainActivity : ComponentActivity() {
                             menuState.isVisible || menuState.dialogContent != null || bottomSheetPageState.isVisible ||
                             playerBottomSheetState.isExpandedOrExpanding || active || homeOverflowMenuExpanded || topAppBarOverflowExpanded
                     val canPresentStartupPrompt =
-                        LocalWindowInfo.current.isWindowFocused && !blockingStartupModal && !showStarDialog
+                        LocalWindowInfo.current.isWindowFocused && !blockingStartupModal && !showStarDialog && !isAppUpdateScreen
 
                     LaunchedEffect(whatsNewState is WhatsNewState.Showing, canPresentStartupPrompt) {
                         if (whatsNewState !is WhatsNewState.Showing) {
@@ -1669,10 +1592,14 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    LaunchedEffect(pendingUpdateVersion, updateNotesLoaded, whatsNewPending, canPresentStartupPrompt) {
-                        if (pendingUpdateVersion != null && updateNotesLoaded && !whatsNewPending && canPresentStartupPrompt) {
-                            pendingUpdateVersion = null
-                            bottomSheetPageState.show(updateSheetContent)
+                    LaunchedEffect(pendingUpdateVersion, whatsNewPending, canPresentStartupPrompt, isAppUpdateScreen, currentNavigationLifecycle) {
+                        if (pendingUpdateVersion != null) {
+                            if (isAppUpdateScreen) {
+                                presentedUpdateVersion = pendingUpdateVersion
+                            } else if (!whatsNewPending && canPresentStartupPrompt && currentNavigationLifecycle == Lifecycle.State.RESUMED) {
+                                navController.navigate(AppUpdateRoute) { launchSingleTop = true }
+                                presentedUpdateVersion = pendingUpdateVersion
+                            }
                         }
                     }
                     LaunchedEffect(starPromptPending, pendingUpdateVersion, whatsNewPending, canPresentStartupPrompt) {
@@ -2010,7 +1937,7 @@ class MainActivity : ComponentActivity() {
                                                     actions = {
                                                         val hasUpdateAvailable =
                                                             BuildConfig.UPDATER_AVAILABLE &&
-                                                                Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
+                                                                Updater.isUpdateAvailable(latestVersionName ?: BuildConfig.VERSION_NAME, BuildConfig.VERSION_NAME)
                                                         val newsTooltipState = rememberTooltipState()
                                                         val newsLifecycleOwner = LocalLifecycleOwner.current
                                                         LaunchedEffect(
@@ -2697,7 +2624,10 @@ class MainActivity : ComponentActivity() {
                                             homeViewModel,
                                             { latestVersionName },
                                             disableAnimations,
-                                            onClearUpdateBadge = { latestVersionName = BuildConfig.VERSION_NAME },
+                                            onUpdateReleaseChecked = { release ->
+                                                startupUpdateViewModel?.acceptCheckedRelease(release)
+                                                presentedUpdateVersion = release?.version
+                                            },
                                             homeScrollConnection = homeScrollBehavior.nestedScrollConnection,
                                             searchScrollConnection = searchScrollBehavior.nestedScrollConnection,
                                             libraryScrollBehavior = libraryScrollBehavior,

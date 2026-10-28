@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import moe.rukamori.archivetune.BuildConfig
+import moe.rukamori.archivetune.updates.AppUpdateRelease
 import moe.rukamori.archivetune.musicrecognition.MusicRecognitionRoute
 import moe.rukamori.archivetune.musicrecognition.MusicRecognitionDetailsRoute
 import moe.rukamori.archivetune.ui.screens.BrowseScreen
@@ -56,6 +57,8 @@ import moe.rukamori.archivetune.ui.screens.settings.AccountSettings
 import moe.rukamori.archivetune.ui.screens.settings.AiIntegrationSettings
 import moe.rukamori.archivetune.ui.screens.settings.AodCustomizedScreen
 import moe.rukamori.archivetune.ui.screens.settings.AndroidAutoSettings
+import moe.rukamori.archivetune.ui.screens.settings.AppUpdateRoute
+import moe.rukamori.archivetune.ui.screens.settings.AppUpdateScreen
 import moe.rukamori.archivetune.ui.screens.settings.CanvasSettings
 import moe.rukamori.archivetune.ui.screens.settings.AppearanceSettings
 import moe.rukamori.archivetune.ui.screens.settings.BackupAndRestore
@@ -90,9 +93,9 @@ fun NavGraphBuilder.navigationBuilder(
     navController: NavHostController,
     scrollBehavior: TopAppBarScrollBehavior,
     homeViewModel: HomeViewModel,
-    latestVersionName: () -> String,
+    latestVersionName: () -> String?,
     disableAnimations: Boolean = false,
-    onClearUpdateBadge: () -> Unit = {},
+    onUpdateReleaseChecked: (AppUpdateRelease?) -> Unit = {},
     homeScrollConnection: NestedScrollConnection? = null,
     searchScrollConnection: NestedScrollConnection? = null,
     onlineSearchSort: OnlineSearchSort = OnlineSearchSort.DEFAULT,
@@ -404,12 +407,12 @@ fun NavGraphBuilder.navigationBuilder(
         YouTubeBrowseScreen(navController)
     }
     composable("settings") {
-        SettingsScreen(navController, latestVersionName())
+        SettingsScreen(navController, latestVersionName() ?: BuildConfig.VERSION_NAME)
     }
     composable("settings/account") {
         AccountSettings(
             navController = navController,
-            latestVersionName = latestVersionName(),
+            latestVersionName = latestVersionName() ?: BuildConfig.VERSION_NAME,
             viewModel = homeViewModel,
         )
     }
@@ -490,8 +493,19 @@ fun NavGraphBuilder.navigationBuilder(
         LogcatScreen(navController)
     }
     if (BuildConfig.UPDATER_AVAILABLE) {
+        composable(
+            route = "$AppUpdateRoute?forceRefresh={forceRefresh}",
+            arguments = listOf(
+                navArgument("forceRefresh") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+            ),
+        ) {
+            AppUpdateScreen(navController, onReleaseChecked = onUpdateReleaseChecked)
+        }
         composable("settings/update") {
-            UpdateScreen(navController, onUpToDate = onClearUpdateBadge)
+            UpdateScreen(navController, latestVersion = latestVersionName())
         }
     }
     composable("settings/changelog") {

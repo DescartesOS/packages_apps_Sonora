@@ -43,6 +43,9 @@ data class ReleaseInfo(
     val publishedAt: String,
     val htmlUrl: String,
     val downloadUrl: String? = null,
+    val downloadSizeBytes: Long? = null,
+    val isDraft: Boolean = false,
+    val isPrerelease: Boolean = false,
 )
 
 private data class ReleasesNetworkResult(
@@ -226,6 +229,16 @@ object Updater {
         return candidates.maxWithOrNull(compareBy({ it.first }, { it.second.publishedAt }))?.second
     }
 
+    internal fun newerStableReleaseCount(releases: List<ReleaseInfo>, currentVersion: String): Int {
+        val current = parseSemVerOrNull(currentVersion) ?: return 0
+        return releases.asSequence()
+            .filter { !it.isDraft && !it.isPrerelease && it.publishedAt.isNotBlank() }
+            .mapNotNull(::parseReleaseSemVerOrNull)
+            .filter { it.preRelease.isEmpty() && it > current }
+            .distinct()
+            .count()
+    }
+
     private fun preferredReleaseVersionNameOrNull(release: ReleaseInfo): String? =
         parseReleaseSemVerOrNull(release)?.normalizedName()
 
@@ -246,27 +259,26 @@ object Updater {
 
     private fun parseReleaseJson(item: JSONObject, expectedArtifactName: String): ReleaseInfo {
         val assets = item.optJSONArray("assets")
-        val assetDownloadUrl =
+        val asset =
             assets?.let { releaseAssets ->
                 (0 until releaseAssets.length())
                     .asSequence()
                     .mapNotNull(releaseAssets::optJSONObject)
                     .firstOrNull { asset -> asset.optString("name") == expectedArtifactName }
-                    ?.optString("browser_download_url")
-                    ?.takeIf { it.isNotBlank() }
             }
+        val assetDownloadUrl = asset?.optString("browser_download_url")?.takeIf { it.isNotBlank() }
+        val downloadUrl = item.optString("download_url").takeIf { !item.isNull("download_url") && it.isNotBlank() }
+            ?: assetDownloadUrl
         return ReleaseInfo(
             tagName = item.optString("tag_name", ""),
             name = item.optString("name", ""),
             body = if (item.isNull("body")) null else item.optString("body"),
             publishedAt = item.optString("published_at", ""),
             htmlUrl = item.optString("html_url", ""),
-            downloadUrl =
-                if (item.isNull("download_url")) {
-                    null
-                } else {
-                    item.optString("download_url").takeIf { it.isNotBlank() }
-                } ?: assetDownloadUrl,
+            downloadUrl = downloadUrl,
+            downloadSizeBytes = asset?.optLong("size")?.takeIf { it > 0 && downloadUrl == assetDownloadUrl },
+            isDraft = item.optBoolean("draft", false),
+            isPrerelease = item.optBoolean("prerelease", false),
         )
     }
 
@@ -317,6 +329,7 @@ object Updater {
     ): ReleasesNetworkResult {
         val response: HttpResponse =
             client.get("https://api.github.com/repos/$releaseOwner/$releaseRepo/releases?per_page=$perPage") {
+                timeout { requestTimeoutMillis = 10_000 }
                 headers {
                     append("Accept", "application/vnd.github+json")
                     append("User-Agent", "ArchiveTune")
@@ -429,6 +442,15 @@ object Updater {
         return "$stableReleaseBaseUrl/latest/download/$artifactName"
     }
 
+    internal fun getReleaseDownloadUrl(release: ReleaseInfo): String =
+        if (canDownloadUpdatesDirectly) {
+            release.downloadUrl
+                ?: "$stableReleaseBaseUrl/download/${Uri.encode(release.tagName)}/${stableReleaseArtifactName()}"
+        } else {
+            release.htmlUrl.takeIf { it.startsWith("$stableReleaseBaseUrl/tag/") }
+                ?: getReleasePageUrl(getReleaseVersionName(release))
+        }
+
     suspend fun getAllReleases(
         perPage: Int = 30,
         forceRefresh: Boolean = false,
@@ -465,7 +487,8 @@ object Updater {
                     )
                 } catch (error: CancellationException) {
                     throw error
-                } catch (_: Exception) {
+                } catch (error: Exception) {
+                    if (forceRefresh) throw error
                     null
                 }
 
@@ -512,6 +535,7 @@ object Updater {
                 }
 
                 else -> {
+                    check(!forceRefresh) { "Failed to fetch releases: HTTP ${networkResult.status.value}" }
                     val fallback = cachedReleases
                     if (fallback != null) {
                         lastCheckTime = now
