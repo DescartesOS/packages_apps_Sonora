@@ -921,6 +921,8 @@ val AutomaticUpdateCheckKey = booleanPreferencesKey("automaticUpdateCheck")
 val EnableUpdateNotificationKey = booleanPreferencesKey("enableUpdateNotification")
 val LastUpdateCheckKey = longPreferencesKey("lastUpdateCheck")
 val LastNotifiedVersionKey = stringPreferencesKey("lastNotifiedVersion")
+val WhatsNewVersionKey = stringPreferencesKey("whats_new_version")
+val WhatsNewPendingKey = booleanPreferencesKey("whats_new_pending")
 
 val GitHubContributorsEtagKey = stringPreferencesKey("github_contributors_etag")
 val GitHubContributorsJsonKey = stringPreferencesKey("github_contributors_json")

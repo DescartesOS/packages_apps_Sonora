@@ -63,6 +63,7 @@ import moe.rukamori.archivetune.playback.MusicService.Companion.PERSISTENT_QUEUE
 import moe.rukamori.archivetune.playlistexport.ExportPlaylistAsCsvUseCase
 import moe.rukamori.archivetune.playlistexport.ExportablePlaylist
 import moe.rukamori.archivetune.playlistexport.ObserveExportablePlaylistsUseCase
+import moe.rukamori.archivetune.updates.WhatsNewRepository
 import moe.rukamori.archivetune.utils.dataStore
 import moe.rukamori.archivetune.utils.reportException
 import moe.rukamori.archivetune.modules.ModuleRepository
@@ -760,7 +761,7 @@ class BackupRestoreViewModel
                     val name = parser.name
                     val keyName = parser.getAttributeValue(null, "name")
 
-                    if (keyName != null && keyName !in excludedKeyNames) {
+                    if (keyName != null && keyName !in excludedKeyNames && keyName !in WhatsNewRepository.LOCAL_PREFERENCE_KEYS) {
                         when (name) {
                             "boolean" -> {
                                 val value = parser.getAttributeValue(null, "value")?.toBoolean()

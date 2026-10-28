@@ -138,6 +138,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -285,6 +287,7 @@ import moe.rukamori.archivetune.ui.component.StarDialog
 import moe.rukamori.archivetune.ui.component.TopAppBarOverflowMenu
 import moe.rukamori.archivetune.ui.component.TopSearch
 import moe.rukamori.archivetune.ui.component.TvNavigationRail
+import moe.rukamori.archivetune.ui.component.WhatsNewDialog
 import moe.rukamori.archivetune.ui.component.rememberBottomSheetState
 import moe.rukamori.archivetune.ui.component.shimmer.ShimmerTheme
 import moe.rukamori.archivetune.ui.menu.YouTubeSongMenu
@@ -333,6 +336,8 @@ import moe.rukamori.archivetune.viewmodels.MainMenuViewModel
 import moe.rukamori.archivetune.viewmodels.NetworkBannerViewModel
 import moe.rukamori.archivetune.viewmodels.NewsViewModel
 import moe.rukamori.archivetune.viewmodels.OnlineSearchSort
+import moe.rukamori.archivetune.viewmodels.WhatsNewState
+import moe.rukamori.archivetune.viewmodels.WhatsNewViewModel
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.roundToInt
@@ -635,6 +640,28 @@ class MainActivity : ComponentActivity() {
         setContent {
             if (!appLocaleInitialized) return@setContent
 
+            val whatsNewViewModel: WhatsNewViewModel = hiltViewModel()
+            val whatsNewState by whatsNewViewModel.state.collectAsStateWithLifecycle()
+            val backupInProgress by whatsNewViewModel.backupInProgress.collectAsStateWithLifecycle()
+            val startupLifecycleOwner = LocalLifecycleOwner.current
+            val uriHandler = LocalUriHandler.current
+            LaunchedEffect(whatsNewViewModel, startupLifecycleOwner, uriHandler) {
+                startupLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                    whatsNewViewModel.releasePages.collect { url ->
+                        try {
+                            uriHandler.openUri(url)
+                        } catch (_: IllegalArgumentException) {
+                            Toast.makeText(this@MainActivity, R.string.whats_new_open_failed, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            }
+            LaunchedEffect(whatsNewState) {
+                if (whatsNewState is WhatsNewState.StartupError) {
+                    Toast.makeText(this@MainActivity, R.string.whats_new_startup_failed, Toast.LENGTH_LONG).show()
+                }
+            }
+
             val gatekeeperViewModel: GatekeeperViewModel = hiltViewModel()
             LaunchedEffect(Unit) {
                 gatekeeperViewModel.blockedMessages.collect { message ->
@@ -728,6 +755,8 @@ class MainActivity : ComponentActivity() {
                         .MenuState()
                 }
             val releaseNotesState = remember { mutableStateOf<String?>(null) }
+            var pendingUpdateVersion by remember { mutableStateOf<String?>(null) }
+            var updateNotesLoaded by remember { mutableStateOf(false) }
             val updateSheetContent: @Composable ColumnScope.() -> Unit = {
                 // receiver: ColumnScope
                 Text(
@@ -794,12 +823,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // fetch release notes and show sheet when a new version is detected
             LaunchedEffect(latestVersionName) {
                 if (
                     BuildConfig.UPDATER_AVAILABLE &&
                     Updater.isUpdateAvailable(latestVersionName, BuildConfig.VERSION_NAME)
                 ) {
+                    pendingUpdateVersion = latestVersionName
+                    updateNotesLoaded = false
                     val releaseNotesResult = Updater.getLatestReleaseNotes()
                     releaseNotesResult
                         .onSuccess {
@@ -808,7 +838,10 @@ class MainActivity : ComponentActivity() {
                             releaseNotesState.value = null
                         }
 
-                    bottomSheetPageState.show(updateSheetContent)
+                    updateNotesLoaded = true
+                } else {
+                    pendingUpdateVersion = null
+                    updateNotesLoaded = false
                 }
             }
 
@@ -1608,6 +1641,46 @@ class MainActivity : ComponentActivity() {
                     }
 
                     var showStarDialog by remember { mutableStateOf(false) }
+                    var starPromptPending by remember { mutableStateOf(false) }
+                    var whatsNewPresented by remember { mutableStateOf(false) }
+                    val whatsNewPending = whatsNewState is WhatsNewState.Checking || whatsNewState is WhatsNewState.Showing
+                    val blockingStartupModal =
+                        pendingBackupRestoreUri != null || backupInProgress || sharedSong != null ||
+                            menuState.isVisible || menuState.dialogContent != null || bottomSheetPageState.isVisible ||
+                            playerBottomSheetState.isExpandedOrExpanding || active || homeOverflowMenuExpanded || topAppBarOverflowExpanded
+                    val canPresentStartupPrompt =
+                        LocalWindowInfo.current.isWindowFocused && !blockingStartupModal && !showStarDialog
+
+                    LaunchedEffect(whatsNewState is WhatsNewState.Showing, canPresentStartupPrompt) {
+                        if (whatsNewState !is WhatsNewState.Showing) {
+                            whatsNewPresented = false
+                        } else if (canPresentStartupPrompt) {
+                            whatsNewPresented = true
+                        }
+                    }
+                    val showingWhatsNew = whatsNewState as? WhatsNewState.Showing
+                    if (showingWhatsNew != null && whatsNewPresented && !blockingStartupModal) {
+                        WhatsNewDialog(
+                            state = showingWhatsNew,
+                            disableAnimations = disableAnimations,
+                            onDismiss = { whatsNewViewModel.dismiss() },
+                            onReleaseNotes = { whatsNewViewModel.dismiss(openReleaseNotes = true) },
+                            onRetry = whatsNewViewModel::retry,
+                        )
+                    }
+
+                    LaunchedEffect(pendingUpdateVersion, updateNotesLoaded, whatsNewPending, canPresentStartupPrompt) {
+                        if (pendingUpdateVersion != null && updateNotesLoaded && !whatsNewPending && canPresentStartupPrompt) {
+                            pendingUpdateVersion = null
+                            bottomSheetPageState.show(updateSheetContent)
+                        }
+                    }
+                    LaunchedEffect(starPromptPending, pendingUpdateVersion, whatsNewPending, canPresentStartupPrompt) {
+                        if (starPromptPending && pendingUpdateVersion == null && !whatsNewPending && canPresentStartupPrompt) {
+                            starPromptPending = false
+                            showStarDialog = true
+                        }
+                    }
 
                     LaunchedEffect(Unit) {
                         kotlinx.coroutines.delay(3000)
@@ -1627,16 +1700,7 @@ class MainActivity : ComponentActivity() {
                                 !hasPressed && (dataStore[LaunchCountKey] ?: 0) >= remindAfter
                             }
 
-                        if (shouldShow) {
-                            var waited = 0L
-                            val waitStep = 500L
-                            val maxWait = 30_000L
-                            while (bottomSheetPageState.isVisible && waited < maxWait) {
-                                delay(waitStep)
-                                waited += waitStep
-                            }
-                            showStarDialog = true
-                        }
+                        starPromptPending = shouldShow
                     }
 
                     if (showStarDialog) {
