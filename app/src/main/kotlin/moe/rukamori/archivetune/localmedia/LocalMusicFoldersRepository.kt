@@ -7,10 +7,15 @@
 
 package moe.rukamori.archivetune.localmedia
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.DocumentsContract
+import androidx.core.content.ContextCompat
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.IOException
@@ -18,6 +23,10 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.constants.LocalSongsExcludedFoldersKey
 import moe.rukamori.archivetune.constants.LocalSongsIncludedFoldersKey
@@ -27,6 +36,41 @@ import moe.rukamori.archivetune.utils.dataStore
 class LocalMusicFoldersRepository @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
+    val configuration: Flow<LocalSongScanConfig> = context.dataStore.data.map(::readConfiguration).distinctUntilChanged()
+
+    suspend fun currentConfiguration(): LocalSongScanConfig = configuration.first()
+
+    suspend fun readAccess(): LocalMusicAccess = withContext(Dispatchers.IO) {
+        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else Manifest.permission.READ_EXTERNAL_STORAGE
+        LocalMusicAccess(
+            hasMediaPermission = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED,
+            readableFolders = context.contentResolver.persistedUriPermissions.filter { it.isReadPermission }
+                .map { it.uri.toString() }.toSet(),
+        )
+    }
+
+    suspend fun setMinimumDuration(seconds: Int): LocalSongScanConfig =
+        readConfiguration(context.dataStore.edit { it[LocalSongsMinDurationSecondsKey] = seconds })
+
+    suspend fun addExcludedFolder(uri: Uri): LocalSongScanConfig = withContext(Dispatchers.IO) {
+        require(DocumentsContract.isTreeUri(uri))
+        readConfiguration(context.dataStore.edit { preferences ->
+            preferences[LocalSongsExcludedFoldersKey] = LocalSongScanConfig.deduplicateFolderEntries(
+                preferences[LocalSongsExcludedFoldersKey].orEmpty() + uri.toString(),
+            )
+            preferences[LocalSongsIncludedFoldersKey] = preferences[LocalSongsIncludedFoldersKey].orEmpty()
+                .filterNot { LocalSongScanConfig.sameFolder(it, uri.toString()) }.toSet()
+        })
+    }
+
+    suspend fun removeFolder(entry: String, included: Boolean): LocalSongScanConfig =
+        readConfiguration(context.dataStore.edit { preferences ->
+            val key = if (included) LocalSongsIncludedFoldersKey else LocalSongsExcludedFoldersKey
+            preferences[key] = preferences[key].orEmpty().filterNot { it == entry }.toSet()
+        })
+
     suspend fun addIncludedFolder(uri: Uri): LocalSongScanConfig = withContext(Dispatchers.IO) {
         require(DocumentsContract.isTreeUri(uri))
         context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -43,12 +87,14 @@ class LocalMusicFoldersRepository @Inject constructor(
                 LocalMusicFolder.fromEntry(it).contains(selected)
             }.toSet()
         }
-        LocalSongScanConfig(
-            minimumDurationSeconds = preferences[LocalSongsMinDurationSecondsKey] ?: 0,
-            includedFolders = preferences[LocalSongsIncludedFoldersKey].orEmpty(),
-            excludedFolders = preferences[LocalSongsExcludedFoldersKey].orEmpty(),
-        )
+        readConfiguration(preferences)
     }
+
+    private fun readConfiguration(preferences: Preferences): LocalSongScanConfig = LocalSongScanConfig(
+        minimumDurationSeconds = preferences[LocalSongsMinDurationSecondsKey] ?: 0,
+        includedFolders = preferences[LocalSongsIncludedFoldersKey].orEmpty(),
+        excludedFolders = preferences[LocalSongsExcludedFoldersKey].orEmpty(),
+    )
 
     internal suspend fun audioDocuments(
         treeUri: Uri,
@@ -109,6 +155,11 @@ class LocalMusicFoldersRepository @Inject constructor(
         documents
     }
 }
+
+data class LocalMusicAccess(
+    val hasMediaPermission: Boolean,
+    val readableFolders: Set<String>,
+)
 
 internal data class LocalAudioDocument(
     val uri: Uri,

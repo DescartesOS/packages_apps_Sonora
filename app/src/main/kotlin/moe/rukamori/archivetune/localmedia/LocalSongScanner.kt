@@ -77,9 +77,6 @@ data class LocalSongScanConfig(
                 .replace(DuplicateSlashRegex, "/")
                 .trim('/')
 
-        fun folderDisplayName(entry: String): String =
-            LocalMusicFolder.fromEntry(entry).let { it.path.ifEmpty { it.volume.orEmpty() } }
-
         fun sameFolder(first: String, second: String): Boolean {
             val firstFolder = LocalMusicFolder.fromEntry(first)
             val secondFolder = LocalMusicFolder.fromEntry(second)
