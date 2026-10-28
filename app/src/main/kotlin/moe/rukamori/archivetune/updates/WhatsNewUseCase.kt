@@ -56,9 +56,15 @@ class WhatsNewUseCase @Inject constructor(
 
     private fun extractHighlights(markdown: String): ImmutableList<WhatsNewSection> {
         val headings = mutableListOf<ReleaseHeading>()
-        val candidates = mutableListOf<Highlight>()
-        val seen = mutableSetOf<String>()
-        var sectionId = 0
+        val changes = WhatsNewCategory.entries.associateWith { linkedMapOf<String, String>() }
+
+        fun addChange(text: String) {
+            val heading = headings.lastOrNull()
+            if (heading?.excluded == true || text.isBlank() || metadata.containsMatchIn(text)) return
+            val category = heading?.category ?: changeCategory(text)
+                ?: if (heading?.inHighlights == true) WhatsNewCategory.FEATURES else return
+            changes.getValue(category).putIfAbsent(text.lowercase(Locale.ROOT), text)
+        }
 
         Parser.builder().build().parse(markdown).accept(object : AbstractVisitor() {
             override fun visit(heading: Heading) {
@@ -69,37 +75,39 @@ class WhatsNewUseCase @Inject constructor(
                         level = heading.level,
                         category = headingCategory(title) ?: headings.lastOrNull()?.category,
                         excluded = headings.lastOrNull()?.excluded == true || excludedSection.containsMatchIn(title),
+                        inHighlights = highlightsHeading.containsMatchIn(title) || headings.lastOrNull()?.inHighlights == true,
                     ),
                 )
-                sectionId++
             }
 
             override fun visit(item: ListItem) {
-                if (headings.lastOrNull()?.excluded != true) {
-                    var child = item.firstChild
-                    while (child != null && child !is Paragraph) child = child.next
-                    val text = child?.let(::plainText).orEmpty()
-                    val category = headings.lastOrNull()?.category ?: changeCategory(text)
-                    val preview = abbreviate(text)
-                    if (preview.isNotBlank() && category != null && !metadata.containsMatchIn(text) && seen.add(preview.lowercase(Locale.ROOT))) {
-                        candidates.add(Highlight(category, sectionId, candidates.size, preview))
+                val paragraphs = mutableListOf<String>()
+                var child = item.firstChild
+                while (child != null) {
+                    if (child is Paragraph) {
+                        val text = plainText(child)
+                        if (text.isNotBlank() && !metadata.containsMatchIn(text)) paragraphs.add(text)
                     }
+                    child = child.next
                 }
+                addChange(paragraphs.joinToString("\n\n"))
                 visitChildren(item)
+            }
+
+            override fun visit(paragraph: Paragraph) {
+                var ancestor = paragraph.parent
+                while (ancestor != null) {
+                    if (ancestor is ListItem) return
+                    ancestor = ancestor.parent
+                }
+                addChange(plainText(paragraph))
             }
         })
 
         return ImmutableList.copyOf(
             WhatsNewCategory.entries.mapNotNull { category ->
-                val changes = candidates.filter { it.category == category }
-                val selected = changes.distinctBy { it.section }.take(2).toMutableList()
-                changes.forEach { change ->
-                    if (selected.size < 2 && change !in selected) selected.add(change)
-                }
-                if (selected.isEmpty()) null else WhatsNewSection(
-                    category,
-                    ImmutableList.copyOf(selected.sortedBy { it.order }.map { it.text }),
-                )
+                val entries = changes.getValue(category).values
+                if (entries.isEmpty()) null else WhatsNewSection(category, ImmutableList.copyOf(entries))
             },
         )
     }
@@ -130,15 +138,12 @@ class WhatsNewUseCase @Inject constructor(
         else -> null
     }
 
-    private fun abbreviate(text: String): String {
-        if (text.length <= 180) return text
-        val boundary = text.lastIndexOf(' ', 179)
-        val end = if (boundary > 0) boundary else if (text[178].isHighSurrogate()) 178 else 179
-        return text.take(end).trimEnd() + "…"
-    }
-
-    private data class ReleaseHeading(val level: Int, val category: WhatsNewCategory?, val excluded: Boolean)
-    private data class Highlight(val category: WhatsNewCategory, val section: Int, val order: Int, val text: String)
+    private data class ReleaseHeading(
+        val level: Int,
+        val category: WhatsNewCategory?,
+        val excluded: Boolean,
+        val inHighlights: Boolean,
+    )
 
     private companion object {
         val whitespace = Regex("\\s+")
@@ -147,6 +152,7 @@ class WhatsNewUseCase @Inject constructor(
         val fixHeading = Regex("\\b(fix(?:es|ed)?|bugs?|resolved)\\b")
         val improvementHeading = Regex("\\b(improvements?|enhancements?|performance|stability|optimizations?)\\b")
         val featureHeading = Regex("\\b(features?|additions?)\\b")
+        val highlightsHeading = Regex("\\bhighlights\\b|what[’']s new")
         val fixChange = Regex("^(fix(?:ed|es)?|correct(?:ed|s)?|resolve[ds]?|prevent(?:ed|s)?|eliminate[ds]?|repair(?:ed|s)?|restore[ds]?)\\b", RegexOption.IGNORE_CASE)
         val improvementChange = Regex("^(improve[ds]?|enhance[ds]?|optimize[ds]?|refine[ds]?|update[ds]?|reduce[ds]?|simplif(?:y|ied)|unif(?:y|ied)|harden(?:ed)?|rework(?:ed)?)\\b", RegexOption.IGNORE_CASE)
         val featureChange = Regex("^(add(?:ed|s)?|introduce[ds]?|integrate[ds]?|enable[ds]?|new|support(?:ed|s)?)\\b", RegexOption.IGNORE_CASE)
