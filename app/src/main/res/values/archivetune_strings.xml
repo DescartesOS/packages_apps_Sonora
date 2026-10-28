@@ -254,7 +254,6 @@
     <string name="aod_customize_screensaver_info_title">System Screen Saver (Charging AOD)</string>
     <string name="aod_customize_screensaver_info_desc">To activate AOD automatically while charging or docked, go to Android Settings &gt; Display &gt; Screen saver and select ArchiveTune.</string>
     <string name="retry_button">Retry</string>
-    <string name="album_cover_desc">Album cover</string>
     <string name="top_music_videos">Top music videos</string>
     <string name="trending">Trending</string>
     <string name="weeks">Weeks</string>
@@ -547,14 +546,11 @@
     <string name="settings_account_subtitle">Sign in and manage account sync</string>
     <string name="settings_stats_title">Listening Stats</string>
     <string name="settings_stats_subtitle">Your top songs, artists, and playback history</string>
-    <string name="similar_content">Similar content</string>
     <string name="top_songs">Top Songs</string>
     <string name="top_albums">Top Albums</string>
     <string name="year_in_music">Year in Music</string>
-    <string name="total_listening_time">Total Listening Time</string>
     <string name="top_artists">Top Artists</string>
     <string name="share_summary">Share Summary</string>
-    <string name="no_listening_data">No listening data for this year</string>
     <string name="year_in_music_top_track">Your top track</string>
     <string name="year_in_music_empty_title">Nothing to recap yet</string>
     <string name="year_in_music_empty_subtitle">Play more music during %d and your recap will appear here.</string>

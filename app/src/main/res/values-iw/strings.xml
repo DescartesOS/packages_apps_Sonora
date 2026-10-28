@@ -115,7 +115,6 @@
     <string name="repeat_mode_off">מצב חזרה כבוי</string>
     <string name="audio_normalization">נרמול אודיו</string>
     <string name="palette_sunset_orange">שקיעה</string>
-    <string name="audio_quality">איכות השמע</string>
     <string name="permanent_shuffle_desc">השאיר ערבוב פעיל כששיר חדש מתנגן</string>
     <string name="change_playlist_cover">שנה את עטיפת הפלייליסט</string>
     <string name="testing_proxy_connection">בודק את חיבור הפרוקסי</string>
@@ -721,7 +720,6 @@
     <string name="updates">עדכונים</string>
     <string name="current_version">גרסה נוכחית</string>
     <string name="latest_version_format">אחרון: %s</string>
-    <string name="updates_status_checking">בודק את הגרסה האחרונה</string>
     <string name="updates_status_current">אתה נמצא בגרסה הזמינה האחרונה</string>
     <string name="enable_update_notification">הפעל התראות עדכון</string>
     <string name="update_channel">עדכון ערוץ</string>
@@ -857,7 +855,6 @@
     <string name="discord_reauthorize_required_title">סשן Discord פג תוקפו</string>
     <string name="discord_reauthorize_required_description">לא ניתן להציג את Rich Presence עד שתאשר שוב את Discord.</string>
     <string name="discord_reauthorize_action">הרשאה מחדש</string>
-    <string name="download_complete">ההורדה הושלמה</string>
     <string name="onboarding_welcome_title">ברוכים הבאים ל- ArchiveTune</string>
     <string name="onboarding_welcome_subtitle">הגדר השמעה, מוזיקה מקומית ועדכון הרשאות לפני שתתחיל להאזין.</string>
     <string name="onboarding_permissions_title">בדיקת הרשאות</string>

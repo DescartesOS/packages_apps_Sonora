@@ -113,7 +113,6 @@
     <string name="updates">تحديثات</string>
     <string name="current_version">الإصدار الحالي</string>
     <string name="latest_version_format">آخر إصدار: %s</string>
-    <string name="updates_status_checking">بنشوفلك آخر إصدار</string>
     <string name="updates_status_current">معاك أحدث إصدار متاح دلوقتي</string>
     <string name="enable_update_notification">فعل إشعارات التحديث</string>
     <string name="unknown">مش معروف</string>
@@ -509,7 +508,6 @@
     <string name="enable_unison_lyrics">تفعيل كلمات Unison</string>
     <string name="enable_simpmusic_lyrics">تفعيل كلمات SimpMusic</string>
     <string name="player_and_audio">المشغل والصوت</string>
-    <string name="audio_quality">جودة الصوت</string>
     <string name="audio_quality_auto">تلقائي</string>
     <string name="audio_quality_high">عالية</string>
     <string name="audio_quality_low">منخفضة</string>
@@ -792,7 +790,6 @@
     <string name="update_notification_title">في تحديث جديد نزل</string>
     <string name="update_notification_text">تحديث ArchiveTune %s بقى متاح دلوقتي</string>
     <string name="download">تنزيل</string>
-    <string name="download_complete">اكتمل التنزيل</string>
     <string name="permissions_title">خلي ArchiveTune يشتغل بأفضل أداء</string>
     <string name="permissions_subtitle">بنحتاج شوية صلاحيات عشان نشغل وننظم مزيكتك من غير مشاكل. تقدر تغيرهم في أي وقت من إعدادات النظام.</string>
     <string name="permission_storage_title">الوصول للمساحة</string>

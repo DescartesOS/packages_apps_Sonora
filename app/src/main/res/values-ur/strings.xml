@@ -477,7 +477,6 @@
     <string name="enable_simpmusic_lyrics">SimpMusic کے بول کو فاعل کریں</string>
     <string name="source">مصدر</string>
     <string name="enable_youlyplus_lyrics">YouLyPlus کے بول کو فاعل کریں</string>
-    <string name="audio_quality">معیار سامعہ</string>
     <string name="audio_quality_auto">خودکار</string>
     <string name="audio_quality_high">اعلیٰ</string>
     <string name="audio_quality_low">کم</string>
@@ -852,7 +851,6 @@
     <string name="recent_commits">حالیہ کام</string>
     <string name="current_version">موجودہ نسخہ</string>
     <string name="latest_version_format">‫تازہ ترین: %s‬</string>
-    <string name="updates_status_checking">‫تازہ ترین اشعات کے لئے دیکھا جا رہا ہے</string>
     <string name="updates_status_current">آپ تازہ ترین دستیاب کردہ شائع پر ہیں</string>
     <string name="enable_update_notification">پیش رفت کی اطلاعات کو فعل کریں</string>
     <string name="enable_update_notification_channel_desc">اطلاع حاصل کریں جب کوئی نیا شائع مقررہ چینل پر دستیاب ہو</string>
@@ -869,7 +867,6 @@
     <string name="update_notification_channel_desc">ایپ کی نئی پیش رفت کی اطلاعات</string>
     <string name="update_notification_title">پیش رفت دستیاب</string>
     <string name="download">ڈاؤنلوڈ</string>
-    <string name="download_complete">ڈاؤنلوڈ مکمل</string>
     <string name="downloads">ڈاؤنلوڈیں</string>
     <string name="download_in_progress">تقدم میں</string>
     <string name="no_downloads">ابھی تک کوئی ڈاؤنلوڈ کردہ موسیقی نہیں</string>

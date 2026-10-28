@@ -156,7 +156,6 @@
     <string name="aod_control_tonal">色調填滿</string>
     <string name="aod_control_minimal">簡約</string>
     <string name="retry_button">重試</string>
-    <string name="album_cover_desc">專輯封面</string>
     <string name="top_music_videos">熱門音樂影片</string>
     <string name="trending">熱門趨勢</string>
     <string name="weeks">週</string>
@@ -435,14 +434,11 @@
     <string name="settings_account_subtitle">登入並管理帳戶同步</string>
     <string name="settings_stats_title">聆聽統計數據</string>
     <string name="settings_stats_subtitle">您的熱門歌曲、藝人及播放紀錄</string>
-    <string name="similar_content">類似內容</string>
     <string name="top_songs">熱門歌曲</string>
     <string name="top_albums">熱門專輯</string>
     <string name="year_in_music">年度音樂回顧</string>
-    <string name="total_listening_time">總收聽時長</string>
     <string name="top_artists">熱門藝人</string>
     <string name="share_summary">分享摘要</string>
-    <string name="no_listening_data">今年沒有收聽數據</string>
     <string name="year_in_music_top_track">您的熱門曲目</string>
     <string name="year_in_music_empty_title">目前還沒有什麼好總結的</string>
     <string name="year_in_music_empty_subtitle">在 %d 期間多聽一些音樂，你的回顧就會顯示在這裡。</string>

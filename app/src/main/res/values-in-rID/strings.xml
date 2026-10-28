@@ -516,7 +516,6 @@
     <string name="enable_simpmusic_lyrics">Aktifkan lirik SimpMusic</string>
     <string name="enable_megalobiz_lyrics">Aktifkan lirik Megalobiz</string>
     <string name="player_and_audio">Pemutar dan audio</string>
-    <string name="audio_quality">Kualitas audio</string>
     <string name="audio_quality_auto">Otomatis</string>
     <string name="audio_quality_high">Tinggi</string>
     <string name="audio_quality_low">Rendah</string>
@@ -867,7 +866,6 @@
     <string name="updates">Pembaruan</string>
     <string name="current_version">Versi Saat Ini</string>
     <string name="latest_version_format">Terbaru: %s</string>
-    <string name="updates_status_checking">Memeriksa rilis terbaru</string>
     <string name="updates_status_current">Anda sedang menggunakan rilis terbaru yang tersedia</string>
     <string name="enable_update_notification">Aktifkan Pemberitahuan Pembaruan</string>
     <string name="enable_update_notification_channel_desc">Dapatkan pemberitahuan ketika rilis baru tersedia di saluran yang dipilih</string>
@@ -886,7 +884,6 @@
     <string name="update_notification_title">Pembaruan Tersedia</string>
     <string name="update_notification_text">ArchiveTune %s kini tersedia</string>
     <string name="download">Unduh</string>
-    <string name="download_complete">Pengunduhan selesai</string>
     <string name="downloads">Unduhan</string>
     <string name="download_in_progress">Sedang berlangsung</string>
     <string name="no_downloads">Belum ada musik yang diunduh</string>

@@ -8,7 +8,6 @@
     <string name="no_title">Kein Titel</string>
     <string name="unknown_artist">Unbekannter Künstler</string>
     <string name="retry_button">Wiederholen</string>
-    <string name="album_cover_desc">Albumcover</string>
     <string name="top_music_videos">Top-Musikvideos</string>
     <string name="trending">Im Trend</string>
     <string name="weeks">Wochen</string>
@@ -57,7 +56,6 @@
     <string name="seek_backward_dynamic">-%1$d Sekunden zurück</string>
     <string name="seek_seconds_addup">Progressive Suche</string>
     <string name="seek_seconds_addup_description">Wenn diese Option aktiviert ist, werden bei jedem Suchsprung schrittweise 5 zusätzliche Sekunden addiert</string>
-    <string name="similar_content">Ähnlicher Inhalt</string>
     <string name="player_background_style">Hintergrundstil des Spielers</string>
     <string name="follow_theme">Thema folgen</string>
     <string name="gradient">Gradient</string>
@@ -352,10 +350,8 @@
     <string name="settings_stats_subtitle">Deine beliebtesten Songs, Interpreten und dein Wiedergabeverlauf</string>
     <string name="top_songs">Top-Songs</string>
     <string name="year_in_music">Ein Jahr in Musik</string>
-    <string name="total_listening_time">Gesamthörzeit</string>
     <string name="top_artists">Top Künstler</string>
     <string name="share_summary">Zusammenfassung teilen</string>
-    <string name="no_listening_data">Keine Daten für dieses Jahr</string>
     <string name="year_in_music_top_track">Dein Toptitel</string>
     <string name="year_in_music_empty_title">Noch gibt es nichts zum Zurückblicken</string>
     <string name="year_in_music_empty_subtitle">Spiele während %d noch mehr Musik, dann wird dein Rückblick hier angezeigt.</string>

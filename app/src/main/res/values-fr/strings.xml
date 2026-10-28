@@ -279,7 +279,6 @@
     <string name="proxy_type">Type de proxy</string>
     <string name="enable_betterlyrics">Activer BetterLyrics</string>
     <string name="player_and_audio">Lecteur &amp; Audio</string>
-    <string name="audio_quality">Qualité audio</string>
     <string name="audio_quality_auto">Auto</string>
     <string name="audio_quality_high">Haute</string>
     <string name="audio_quality_low">Basse</string>
@@ -601,7 +600,6 @@
     <string name="sort_order_descending">Décroissant</string>
     <string name="disable_animations">Désactiver les animations</string>
     <string name="disable_animations_desc">Désactivez la plupart des animations de l\'application. Recommandé pour les appareils bas de gamme</string>
-    <string name="updates_status_checking">Vérification de la dernière version</string>
     <string name="updates_status_current">Vous utilisez la dernière version disponible</string>
     <string name="updates_loading_commits">Chargement des modifications récentes</string>
     <string name="updates_recent_commits_count">%1$d modifications récentes</string>
@@ -881,7 +879,6 @@
     <string name="together_activity_join_requested">%1$s a demandé à rejoindre le groupe</string>
     <string name="together_activity_host_transferred">L\'hôte a été transféré vers %1$s</string>
     <string name="unhide">Afficher</string>
-    <string name="download_complete">Téléchargement complet</string>
     <string name="onboarding_welcome_title">Bienvenue sur ArchiveTune</string>
     <string name="onboarding_welcome_subtitle">Configurez la lecture, la musique locale et les autorisations de mise à jour avant de commencer à écouter.</string>
     <string name="onboarding_permissions_title">Vérifier les autorisations</string>

@@ -8,7 +8,6 @@
     <string name="no_title">Без названия</string>
     <string name="unknown_artist">Неизвестный исполнитель</string>
     <string name="retry_button">Повторить</string>
-    <string name="album_cover_desc">Обложка</string>
     <string name="top_music_videos">Топ музыкальных клипов</string>
     <string name="trending">В тренде</string>
     <string name="weeks">Недели</string>
@@ -160,12 +159,9 @@
     <string name="empty_playlist">Пустой Плейлист</string>
     <string name="empty_playlist_desc">Этот плейлист не содержит никаких песен</string>
     <string name="settings_section_player_content">Плеер и контент</string>
-    <string name="similar_content">Похожий контент</string>
     <string name="year_in_music">Год в Музыке</string>
-    <string name="total_listening_time">Общее время прослушивания</string>
     <string name="top_artists">Топ Исполнителей</string>
     <string name="share_summary">Поделиться сводкой</string>
-    <string name="no_listening_data">Данных о прослушивании за этот год нет</string>
     <string name="custom_theme">Своя тема</string>
     <string name="import_theme">Импортировать тему</string>
     <string name="export_theme">Экспортировать тему</string>

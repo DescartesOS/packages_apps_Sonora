@@ -8,7 +8,6 @@
     <string name="no_title">无标题</string>
     <string name="unknown_artist">未知艺术家</string>
     <string name="retry_button">重试</string>
-    <string name="album_cover_desc">专辑封面</string>
     <string name="top_music_videos">顶级音乐视频</string>
     <string name="trending">热门趋势</string>
     <string name="weeks">周</string>
@@ -124,12 +123,9 @@
     <string name="empty_playlist">空播放列表</string>
     <string name="empty_playlist_desc">此播放列表暂无歌曲</string>
     <string name="settings_section_player_content">播放器与内容</string>
-    <string name="similar_content">类似内容</string>
     <string name="year_in_music">一年里的音乐</string>
-    <string name="total_listening_time">总收听时间</string>
     <string name="top_artists">热门艺术家</string>
     <string name="share_summary">分享摘要</string>
-    <string name="no_listening_data">没有收听数据</string>
     <string name="custom_theme">自定义主题</string>
     <string name="import_theme">导入主题</string>
     <string name="export_theme">导出主题</string>

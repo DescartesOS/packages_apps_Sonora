@@ -8,7 +8,6 @@
     <string name="no_title">Aucun titre</string>
     <string name="unknown_artist">Artiste inconnu</string>
     <string name="retry_button">Réessayer</string>
-    <string name="album_cover_desc">Pochette d\'album</string>
     <string name="top_music_videos">Meilleurs Clips Musicaux</string>
     <string name="trending">Tendance</string>
     <string name="weeks">Semaines</string>
@@ -59,7 +58,6 @@
     <string name="seek_backward_dynamic">-%1$d secondes en arrière</string>
     <string name="seek_seconds_addup">Recherche progressive</string>
     <string name="seek_seconds_addup_description">Si cette option est activée, chaque nouvel appui pour avancer ou reculer ajoute 5 secondes de plus que le saut précédent</string>
-    <string name="similar_content">Contenu similaire</string>
     <string name="player_background_style">Style de l\'arrière plan du lecteur</string>
     <string name="follow_theme">Suivre le thème</string>
     <string name="gradient">Dégradé</string>
@@ -156,10 +154,8 @@
     <string name="show_tags_in_library">Afficher les balises dans la bibliothèque</string>
     <string name="show_tags_in_library_desc">Afficher les puces de filtrage des balises dans la bibliothèque</string>
     <string name="year_in_music">Année en Musique</string>
-    <string name="total_listening_time">Durée totale d\'écoute</string>
     <string name="top_artists">Meilleurs Artistes</string>
     <string name="share_summary">Partager le résumé</string>
-    <string name="no_listening_data">Aucune donnée d\'écoute pour cette année</string>
     <string name="custom_theme">Thème Personnalisé</string>
     <string name="import_theme">Importer un thème</string>
     <string name="export_theme">Exporter le thème</string>

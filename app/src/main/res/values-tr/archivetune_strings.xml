@@ -8,7 +8,6 @@
     <string name="no_title">Başlık yok</string>
     <string name="unknown_artist">Bilinmeyen sanatçı</string>
     <string name="retry_button">Yeniden dene</string>
-    <string name="album_cover_desc">Albüm kapağı</string>
     <string name="top_music_videos">En iyi müzik videoları</string>
     <string name="trending">Trend olan</string>
     <string name="weeks">Haftalar</string>
@@ -153,12 +152,9 @@
         <item quantity="other">%d saniye</item>
     </plurals>
     <string name="settings_section_player_content">Oyuncu &amp; İçeriği</string>
-    <string name="similar_content">Benzer içerik</string>
     <string name="year_in_music">Müzik Yılı</string>
-    <string name="total_listening_time">Toplam Dinleme Süresi</string>
     <string name="top_artists">En çok dinlediğiniz Sanatçılar</string>
     <string name="share_summary">Özeti Paylaş</string>
-    <string name="no_listening_data">Bu yıl için dinleme verisi yok</string>
     <string name="custom_theme">Özel Tema</string>
     <string name="import_theme">Temayı İçe Aktar</string>
     <string name="export_theme">İhracat Teması</string>

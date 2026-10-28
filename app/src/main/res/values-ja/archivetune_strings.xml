@@ -228,7 +228,6 @@
     <string name="aod_customize_screensaver_info_title">システム スクリーン セーバー (AOD の充電)</string>
     <string name="aod_customize_screensaver_info_desc">充電中またはドッキング中に AOD を自動的に有効にするには、Android 設定 &gt; ディスプレイ &gt; スクリーン セーバーに移動し、ArchiveTune を選択します。</string>
     <string name="retry_button">再試行</string>
-    <string name="album_cover_desc">アルバムカバー</string>
     <string name="top_music_videos">人気のミュージック ビデオ</string>
     <string name="trending">トレンド</string>
     <string name="weeks">週間</string>
@@ -495,14 +494,11 @@
     <string name="settings_account_subtitle">サインインしてアカウント同期を管理する</string>
     <string name="settings_stats_title">リスニング統計</string>
     <string name="settings_stats_subtitle">人気の曲、アーティスト、再生履歴</string>
-    <string name="similar_content">類似のコンテンツ</string>
     <string name="top_songs">トップソング</string>
     <string name="top_albums">トップアルバム</string>
     <string name="year_in_music">音楽の一年</string>
-    <string name="total_listening_time">合計リスニング時間</string>
     <string name="top_artists">トップアーティスト</string>
     <string name="share_summary">シェアの概要</string>
-    <string name="no_listening_data">今年の聴取データはありません</string>
     <string name="year_in_music_top_track">あなたのトップトラック</string>
     <string name="year_in_music_empty_title">まだ要約することはありません</string>
     <string name="year_in_music_empty_subtitle">%d 中にさらに音楽を再生すると、ここに要約が表示されます。</string>

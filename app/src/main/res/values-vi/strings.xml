@@ -357,7 +357,6 @@
     <string name="enable_betterlyrics">Bật BetterLyrics</string>
     <string name="enable_simpmusic_lyrics">Bật lời bài hát SimpMusic</string>
     <string name="player_and_audio">Trình phát và âm thanh</string>
-    <string name="audio_quality">Chất lượng âm thanh</string>
     <string name="audio_quality_auto">Tự động</string>
     <string name="audio_quality_high">Cao</string>
     <string name="audio_quality_low">Thấp</string>
@@ -541,7 +540,6 @@
     <string name="update_notification_title">Cập nhật Có sẵn</string>
     <string name="update_notification_text">ArchiveTune %s hiện đã có sẵn</string>
     <string name="download">Tải xuống</string>
-    <string name="download_complete">Tải xuống hoàn tất</string>
     <string name="permissions_title">Cho phép ArchiveTune hoạt động tốt nhất</string>
     <string name="permissions_subtitle">Chúng tôi sử dụng một số quyền để phát và quản lý nhạc của bạn một cách đáng tin cậy. Bạn có thể thay đổi những quyền này bất cứ lúc nào trong cài đặt hệ thống.</string>
     <string name="permission_storage_title">Truy cập lưu trữ</string>
@@ -666,7 +664,6 @@
     <string name="sort_order_descending">Giảm dần</string>
     <string name="disable_animations">Vô hiệu hóa hoạt ảnh</string>
     <string name="disable_animations_desc">Vô hiệu hóa hầu hết các hoạt ảnh ứng dụng. Được đề xuất cho các thiết bị cấu hình thấp</string>
-    <string name="updates_status_checking">Kiểm tra bản phát hành mới nhất</string>
     <string name="updates_status_current">Bạn đang ở trên phiên bản mới nhất có sẵn</string>
     <string name="updates_loading_commits">Đang tải các commit gần nhất</string>
     <string name="updates_recent_commits_count">%1$d commit mới nhất</string>

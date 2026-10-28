@@ -157,7 +157,6 @@
     <string name="aod_control_tonal">درجة اللون</string>
     <string name="aod_control_minimal">بسيط</string>
     <string name="retry_button">إعادة المحاولة</string>
-    <string name="album_cover_desc">غلاف الألبوم</string>
     <string name="top_music_videos">أفضل فيديوهات المزيكا</string>
     <string name="trending">الرائج دلوقتي</string>
     <string name="weeks">الأسابيع</string>
@@ -412,14 +411,11 @@
     <string name="settings_account_subtitle">تسجيل الدخول وإدارة مزامنة الحساب</string>
     <string name="settings_stats_title">إحصائيات الاستماع</string>
     <string name="settings_stats_subtitle">أحلى أغانيك، فنانينك، وسجل التشغيل بتاعك</string>
-    <string name="similar_content">محتوى مشابه</string>
     <string name="top_songs">أفضل الأغاني</string>
     <string name="top_albums">أفضل الألبومات</string>
     <string name="year_in_music">حصاد السنة في المزيكا</string>
-    <string name="total_listening_time">إجمالي وقت الاستماع</string>
     <string name="top_artists">أفضل الفنانين</string>
     <string name="share_summary">مشاركة الملخص</string>
-    <string name="no_listening_data">مفيش بيانات استماع للسنة دي</string>
     <string name="year_in_music_top_track">التراك الأفضل عندك</string>
     <string name="year_in_music_empty_title">مفيش حاجة نلخصها لسه</string>
     <string name="year_in_music_empty_subtitle">اسمع مزيكا أكتر خلال %d وهيظهر ملخصك هنا.</string>

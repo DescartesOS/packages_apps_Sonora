@@ -158,7 +158,6 @@
     <string name="aod_control_tonal">Tonal</string>
     <string name="aod_control_minimal">Minimalista</string>
     <string name="retry_button">Tentar novamente</string>
-    <string name="album_cover_desc">Capa do álbum</string>
     <string name="top_music_videos">Principais videoclipes</string>
     <string name="trending">Em alta</string>
     <string name="weeks">Semanas</string>
@@ -414,14 +413,11 @@
     <string name="settings_account_subtitle">Entre e gerencie a sincronização da conta</string>
     <string name="settings_stats_title">Estatísticas de escuta</string>
     <string name="settings_stats_subtitle">Suas principais músicas, artistas e histórico de reprodução</string>
-    <string name="similar_content">Conteúdo semelhante</string>
     <string name="top_songs">Principais músicas</string>
     <string name="top_albums">Principais álbuns</string>
     <string name="year_in_music">Ano na música</string>
-    <string name="total_listening_time">Tempo total de escuta</string>
     <string name="top_artists">Principais artistas</string>
     <string name="share_summary">Compartilhar resumo</string>
-    <string name="no_listening_data">Sem dados de escuta para este ano</string>
     <string name="year_in_music_top_track">Sua faixa principal</string>
     <string name="year_in_music_empty_title">Nada para resumir ainda</string>
     <string name="year_in_music_empty_subtitle">Toque mais músicas durante %d e seu resumo aparecerá aqui.</string>

@@ -269,7 +269,6 @@
     <string name="proxy_type">Proxy-Typ</string>
     <string name="enable_betterlyrics">BetterLyrics aktivieren</string>
     <string name="player_and_audio">Player und Audio</string>
-    <string name="audio_quality">Audioqualität</string>
     <string name="audio_quality_auto">Auto</string>
     <string name="audio_quality_high">Hoch</string>
     <string name="audio_quality_low">Niedrig</string>
@@ -621,7 +620,6 @@
     <string name="playback_state_unknown">UNBEKANNT</string>
     <string name="share_logs">Protokolle teilen</string>
     <string name="updates">Updates</string>
-    <string name="updates_status_checking">Überprüfe auf die aktuellste Version</string>
     <string name="updates_status_current">Du verwendest die aktuellste verfügbare Version</string>
     <string name="enable_update_notification">Updatebenachrichtigung aktivieren</string>
     <string name="update_channel">Updatekanal</string>
@@ -820,7 +818,6 @@
     <string name="updates_recent_commits_count">%1$d aktuelle Commits</string>
     <string name="updates_no_commits">Keine aktuellen Commits gefunden</string>
     <string name="check_for_update">Auf Update überprüfen</string>
-    <string name="download_complete">Herunterladen abgeschlossen</string>
     <string name="onboarding_community_title">Bleibe verbunden</string>
     <string name="onboarding_gms_variant">GMS-Edition</string>
     <string name="onboarding_foss_variant">FOSS-Edition</string>

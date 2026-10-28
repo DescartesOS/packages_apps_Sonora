@@ -308,7 +308,6 @@
     <string name="enable_betterlyrics">Activar BetterLyrics</string>
     <string name="enable_simpmusic_lyrics">Activar letras de SimpMusic</string>
     <string name="player_and_audio">Reproductor y audio</string>
-    <string name="audio_quality">Calidad de audio</string>
     <string name="audio_quality_auto">Automático</string>
     <string name="audio_quality_high">Alta</string>
     <string name="audio_quality_low">Baja</string>
@@ -602,7 +601,6 @@
     <string name="sort_order_descending">Descendente</string>
     <string name="disable_animations">Desactivar animaciones</string>
     <string name="disable_animations_desc">Desactiva la mayoría de las animaciones de las aplicaciones. Recomendado para dispositivos de gama baja</string>
-    <string name="updates_status_checking">Comprobar si hay una nueva versión</string>
     <string name="updates_status_current">Tienes la última versión disponible</string>
     <string name="updates_loading_commits">Cargando las últimas modificaciones</string>
     <string name="updates_recent_commits_count">%1$d commits recientes</string>
@@ -882,7 +880,6 @@
     <string name="copy_log_entry">Copiar entrada de registro</string>
     <string name="export_logs_failed">No se pueden exportar los registros</string>
     <string name="enable_update_notification_channel_desc">Recibe notificaciones cuando haya una nueva versión disponible en el canal seleccionado</string>
-    <string name="download_complete">Descarga completa</string>
     <string name="onboarding_welcome_title">¡Bienvenido a ArchiveTune!</string>
     <string name="onboarding_welcome_subtitle">Configura la reproducción, la música local y los permisos de actualización antes de empezar a escuchar.</string>
     <string name="onboarding_permissions_title">Revisar permisos</string>

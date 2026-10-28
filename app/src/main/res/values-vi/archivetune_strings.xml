@@ -8,7 +8,6 @@
     <string name="no_title">Không có tiêu đề</string>
     <string name="unknown_artist">Nghệ sĩ không xác định</string>
     <string name="retry_button">Thử lại</string>
-    <string name="album_cover_desc">Ảnh bìa album</string>
     <string name="top_music_videos">Video ca nhạc hàng đầu</string>
     <string name="trending">Thịnh hành</string>
     <string name="weeks">Tuần</string>
@@ -150,12 +149,9 @@
         <item quantity="other">%d giây</item>
     </plurals>
     <string name="settings_section_player_content">Trình phát &amp; Nội dung</string>
-    <string name="similar_content">Nội dung tương tự</string>
     <string name="year_in_music">Năm trong nhạc</string>
-    <string name="total_listening_time">Tổng thời gian nghe</string>
     <string name="top_artists">Nghệ sĩ hàng đầu</string>
     <string name="share_summary">Chia sẻ tóm tắt</string>
-    <string name="no_listening_data">Không có dữ liệu nghe cho năm nay</string>
     <string name="custom_theme">Chủ đề tùy chỉnh</string>
     <string name="import_theme">Nhập chủ đề</string>
     <string name="export_theme">Xuất chủ đề</string>

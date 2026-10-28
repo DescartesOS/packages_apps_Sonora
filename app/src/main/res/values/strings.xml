@@ -558,7 +558,6 @@
     <string name="paxsenix_spotify">Paxsenix: Spotify</string>
     <string name="paxsenix_musixmatch">Paxsenix: Musixmatch</string>
     <string name="player_and_audio">Player and audio</string>
-    <string name="audio_quality">Audio quality</string>
     <string name="audio_quality_auto">Auto</string>
     <string name="audio_quality_high">High</string>
     <string name="audio_quality_low">Low</string>
@@ -968,7 +967,6 @@
     <string name="updates">Updates</string>
     <string name="current_version">Current Version</string>
     <string name="latest_version_format">Latest: %s</string>
-    <string name="updates_status_checking">Checking for the latest release</string>
     <string name="updates_status_current">You are on the latest available release</string>
     <string name="automatic_update_checks">Automatic Updates Check</string>
     <string name="automatic_update_checks_desc">Check automatically for optional updates. Required updates are always checked.</string>
@@ -994,7 +992,6 @@
     <string name="update_notification_title">Update Available</string>
     <string name="update_notification_text">ArchiveTune %s is now available</string>
     <string name="download">Download</string>
-    <string name="download_complete">Download complete</string>
     <string name="downloads">Downloads</string>
     <string name="download_in_progress">In progress</string>
     <string name="no_downloads">No downloaded music yet</string>

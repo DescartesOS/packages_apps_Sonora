@@ -227,7 +227,6 @@
     <string name="aod_customize_screensaver_info_title">Screen Saver Sistem (AOD Pengecasan)</string>
     <string name="aod_customize_screensaver_info_desc">Untuk mengaktifkan AOD secara otomatis saat mengisi daya atau terpasang di dok, buka Pengaturan Android &gt; Tampilan &gt; Screen saver lalu pilih ArchiveTune.</string>
     <string name="retry_button">Coba lagi</string>
-    <string name="album_cover_desc">Sampul album</string>
     <string name="top_music_videos">Video musik teratas</string>
     <string name="trending">Sedang tren</string>
     <string name="weeks">Minggu</string>
@@ -505,14 +504,11 @@
     <string name="settings_account_subtitle">Masuk dan kelola sinkronisasi akun</string>
     <string name="settings_stats_title">Statistik Mendengarkan</string>
     <string name="settings_stats_subtitle">Lagu, artis, dan riwayat pemutaran teratas Anda</string>
-    <string name="similar_content">Konten serupa</string>
     <string name="top_songs">Lagu Teratas</string>
     <string name="top_albums">Album Teratas</string>
     <string name="year_in_music">Setahun di Musik</string>
-    <string name="total_listening_time">Total Waktu Mendengarkan</string>
     <string name="top_artists">Artis Teratas</string>
     <string name="share_summary">Bagikan Ringkasan</string>
-    <string name="no_listening_data">Tidak ada data pendengaran untuk tahun ini</string>
     <string name="year_in_music_top_track">Lagu teratasmu</string>
     <string name="year_in_music_empty_title">Belum ada kilas balik untukmu</string>
     <string name="year_in_music_empty_subtitle">Putar lebih banyak musik selama %d dan kilas balikmu akan muncul di sini.</string>

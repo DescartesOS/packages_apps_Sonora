@@ -465,7 +465,6 @@
     <string name="enable_unison_lyrics">啟用 Unison 歌詞來源</string>
     <string name="enable_simpmusic_lyrics">啟用 SimpMusic 歌詞來源</string>
     <string name="player_and_audio">播放器與音訊</string>
-    <string name="audio_quality">音訊品質</string>
     <string name="audio_quality_auto">自動</string>
     <string name="audio_quality_high">高</string>
     <string name="audio_quality_low">低</string>
@@ -744,7 +743,6 @@
     <string name="updates">更新</string>
     <string name="current_version">目前版本</string>
     <string name="latest_version_format">最新： %s</string>
-    <string name="updates_status_checking">正在檢查最新版本</string>
     <string name="updates_status_current">您目前使用的是最新版本</string>
     <string name="enable_update_notification">啟用更新通知</string>
     <string name="update_channel">更新頻道</string>
@@ -762,7 +760,6 @@
     <string name="update_notification_title">有可用更新</string>
     <string name="update_notification_text">ArchiveTune %s 現已推出</string>
     <string name="download">下載</string>
-    <string name="download_complete">下載完成</string>
     <string name="permissions_title">讓 ArchiveTune 發揮最佳效能</string>
     <string name="permissions_subtitle">我們需要一些權限來可靠地播放和管理您的音樂，您可以隨時在系統設定中變更這些權限。</string>
     <string name="permission_storage_title">儲存權限</string>

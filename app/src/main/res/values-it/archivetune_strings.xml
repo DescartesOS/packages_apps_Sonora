@@ -8,7 +8,6 @@
     <string name="no_title">Nessun titolo</string>
     <string name="unknown_artist">Artista sconosciuto</string>
     <string name="retry_button">Riprova</string>
-    <string name="album_cover_desc">Copertina dell\'album</string>
     <string name="top_music_videos">I migliori video musicali</string>
     <string name="trending">In tendenza</string>
     <string name="weeks">Settimane</string>
@@ -156,12 +155,9 @@
         <item quantity="other">%d secondi</item>
     </plurals>
     <string name="settings_section_player_content">Player e contenuto</string>
-    <string name="similar_content">Contenuti simili</string>
     <string name="year_in_music">Il tuo anno in Music</string>
-    <string name="total_listening_time">Tempo di ascolto totale</string>
     <string name="top_artists">Artisti più ascoltati</string>
     <string name="share_summary">Condividi riepilogo</string>
-    <string name="no_listening_data">Nessun dato di ascolto per quest\'anno</string>
     <string name="custom_theme">Tema personalizzato</string>
     <string name="import_theme">Importa tema</string>
     <string name="export_theme">Esporta tema</string>

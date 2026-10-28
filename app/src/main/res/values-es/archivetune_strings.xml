@@ -7,7 +7,6 @@
     <string name="no_title">Sin título</string>
     <string name="unknown_artist">Artista desconocido</string>
     <string name="retry_button">Reintentar</string>
-    <string name="album_cover_desc">Carátula</string>
     <string name="top_music_videos">Top de vídeos musicales</string>
     <string name="trending">Tendencias</string>
     <string name="weeks">Semanas</string>
@@ -164,12 +163,9 @@
     <string name="canvas_cache">Cache del Canvas</string>
     <string name="clear_canvas_cache">Limpiar el cache del canvas</string>
     <string name="settings_section_player_content">Reproductor y contenido</string>
-    <string name="similar_content">Contenido similar</string>
     <string name="year_in_music">Año en Music</string>
-    <string name="total_listening_time">Tiempo Total Escuchado</string>
     <string name="top_artists">Top de Artistas</string>
     <string name="share_summary">Compartir Resumen</string>
-    <string name="no_listening_data">No hay datos escuchados este año</string>
     <string name="custom_theme">Personalizar Tema</string>
     <string name="import_theme">Importar Tema</string>
     <string name="export_theme">Exportar Tema</string>

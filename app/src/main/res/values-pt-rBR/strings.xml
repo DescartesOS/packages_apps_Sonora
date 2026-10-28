@@ -483,7 +483,6 @@
     <string name="enable_unison_lyrics">Ativar letras do Unison</string>
     <string name="enable_simpmusic_lyrics">Ativar letras do SimpMusic</string>
     <string name="player_and_audio">Player e áudio</string>
-    <string name="audio_quality">Qualidade de áudio</string>
     <string name="audio_quality_auto">Automático</string>
     <string name="audio_quality_high">Alta</string>
     <string name="audio_quality_low">Baixa</string>
@@ -762,7 +761,6 @@
     <string name="updates">Atualizações</string>
     <string name="current_version">Versão atual</string>
     <string name="latest_version_format">Mais recente: %s</string>
-    <string name="updates_status_checking">Verificando a versão mais recente</string>
     <string name="updates_status_current">Você está na versão mais recente disponível</string>
     <string name="enable_update_notification">Ativar notificação de atualização</string>
     <string name="update_channel">Canal de atualização</string>
@@ -780,7 +778,6 @@
     <string name="update_notification_title">Atualização disponível</string>
     <string name="update_notification_text">ArchiveTune %s já está disponível</string>
     <string name="download">Baixar</string>
-    <string name="download_complete">Download concluído</string>
     <string name="permissions_title">Permita que o ArchiveTune funcione melhor</string>
     <string name="permissions_subtitle">Usamos algumas permissões para tocar e gerenciar sua música com confiabilidade. Você pode alterá-las a qualquer momento nas configurações do sistema.</string>
     <string name="permission_storage_title">Acesso ao armazenamento</string>

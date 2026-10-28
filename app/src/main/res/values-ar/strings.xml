@@ -317,7 +317,6 @@
     <string name="enable_betterlyrics">تفعيل \"BetterLyrics \"</string>
     <string name="enable_simpmusic_lyrics">تفعيل كلمات SimpMusic</string>
     <string name="player_and_audio">المشغل والصوت</string>
-    <string name="audio_quality">جودة الصوت</string>
     <string name="audio_quality_auto">تلقائي</string>
     <string name="audio_quality_high">عالي</string>
     <string name="audio_quality_low">منخفض</string>
@@ -892,7 +891,6 @@
     <string name="updates">التحديثات</string>
     <string name="current_version">الإصدار الحالي</string>
     <string name="latest_version_format">الأحدث: %s</string>
-    <string name="updates_status_checking">جاري التحقق من أحدث إصدار</string>
     <string name="updates_status_current">أنت على أحدث إصدار متاح</string>
     <string name="enable_update_notification">تفعيل إشعارات التحديث</string>
     <string name="enable_update_notification_channel_desc">تلقي إشعارات عند توفر إصدار جديد في القناة المحددة</string>
@@ -911,7 +909,6 @@
     <string name="update_notification_title">تحديث متوفر</string>
     <string name="update_notification_text">ArchiveTune %s متوفر الآن</string>
     <string name="download">تنزيل</string>
-    <string name="download_complete">اكتمل التنزيل</string>
     <string name="downloads">التنزيلات</string>
     <string name="download_in_progress">قيد التقدم</string>
     <string name="no_downloads">لا توجد موسيقى منزلّة بعد</string>
