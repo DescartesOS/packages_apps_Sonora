@@ -7,6 +7,7 @@
 
 package moe.rukamori.archivetune.viewmodels
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,12 +34,16 @@ import moe.rukamori.archivetune.ui.player.QueueUiModel
 import timber.log.Timber
 import javax.inject.Inject
 
+private const val QueueVisibilityKey = "queue_visible"
+
 @HiltViewModel
 class QueueViewModel @Inject constructor(
     private val repository: QueueRepository,
     private val observeQueue: ObserveQueueUseCase,
     private val edit: EditQueueUseCase,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    val isQueueVisible = savedStateHandle.getStateFlow(QueueVisibilityKey, false)
     private val mutableState = MutableStateFlow<QueueScreenState>(QueueScreenState.Loading)
     val state = mutableState.asStateFlow()
     private val eventChannel = Channel<QueueEvent>(Channel.BUFFERED)
@@ -92,6 +97,21 @@ class QueueViewModel @Inject constructor(
     fun bind(connection: PlayerConnection) = repository.attach(connection)
     fun unbind(connection: PlayerConnection) = repository.detach(connection)
     fun visible() = edit.refresh()
+
+    fun openQueue() {
+        savedStateHandle[QueueVisibilityKey] = true
+    }
+
+    fun dismissQueue() {
+        savedStateHandle[QueueVisibilityKey] = false
+        if (selected.isNotEmpty() || overflow || dragOrder != null) {
+            selected = emptySet()
+            overflow = false
+            dragOrder = null
+            draggedId = null
+            publish()
+        }
+    }
 
     fun sleepTimerClick() {
         if (mutableChrome.value.sleepTimerEnabled) edit.clearSleepTimer()
