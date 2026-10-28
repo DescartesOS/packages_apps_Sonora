@@ -90,7 +90,12 @@ import moe.rukamori.archivetune.playback.queues.ListQueue
 import moe.rukamori.archivetune.spotify.SpotifyLibraryViewModel
 import moe.rukamori.archivetune.spotify.SpotifyMapper
 import moe.rukamori.archivetune.spotify.models.SpotifyPlaylist
+import moe.rukamori.archivetune.ui.component.ArtistGridItem
 import moe.rukamori.archivetune.ui.component.ExpressivePullToRefreshBox
+import moe.rukamori.archivetune.ui.component.GridItem
+import moe.rukamori.archivetune.ui.component.ItemThumbnail
+import moe.rukamori.archivetune.ui.component.PlaylistGridItem
+import moe.rukamori.archivetune.ui.component.SongGridItem
 import moe.rukamori.archivetune.ui.utils.navigateToAlbum
 import moe.rukamori.archivetune.ui.utils.navigateToArtist
 import moe.rukamori.archivetune.utils.rememberPreference
@@ -331,66 +336,21 @@ fun LibraryMixScreen(
                                 color = MaterialTheme.colorScheme.onBackground,
                             )
                             LazyRow(
-                                contentPadding = PaddingValues(horizontal = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                items(recentSongs) { song ->
-                                    Column(
+                                items(
+                                    items = recentSongs,
+                                    key = { song -> song.id },
+                                    contentType = { "recent_song" },
+                                ) { song ->
+                                    SongGridItem(
+                                        song = song,
                                         modifier =
-                                            Modifier
-                                                .width(110.dp)
-                                                .clickable {
-                                                    playerConnection.playQueue(ListQueue(items = listOf(song.toMediaItem())))
-                                                },
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .size(110.dp)
-                                                    .clip(RoundedCornerShape(28.dp)),
-                                        ) {
-                                            AsyncImage(
-                                                model = song.song.thumbnailUrl,
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                            // Play Overlay button
-                                            Box(
-                                                modifier =
-                                                    Modifier
-                                                        .align(Alignment.BottomEnd)
-                                                        .padding(8.dp)
-                                                        .size(28.dp)
-                                                        .clip(CircleShape)
-                                                        .background(MaterialTheme.colorScheme.primary),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.play),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.size(14.dp),
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = song.song.title,
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onBackground,
-                                        )
-                                        Text(
-                                            text = song.artists.joinToString(", ") { it.name },
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                                        )
-                                    }
+                                            Modifier.clickable {
+                                                playerConnection.playQueue(ListQueue(items = listOf(song.toMediaItem())))
+                                            },
+                                    )
                                 }
                             }
                         }
@@ -452,8 +412,7 @@ fun LibraryMixScreen(
                             }
 
                             LazyRow(
-                                contentPadding = PaddingValues(horizontal = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -462,107 +421,35 @@ fun LibraryMixScreen(
                                     key = { playlist -> "playlist_${playlist.id}" },
                                     contentType = { "library_playlist" },
                                 ) { playlist ->
-                                    val cardBgColor =
-                                        rememberArtworkCardColor(
-                                            thumbnailUrl = playlist.thumbnails.getOrNull(0),
-                                            fallbackColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                        )
-
-                                    val interactionSource = remember { MutableInteractionSource() }
-                                    val isPressed by interactionSource.collectIsPressedAsState()
-                                    val scale by animateFloatAsState(
-                                        targetValue = if (isPressed) 0.97f else 1.0f,
-                                        animationSpec =
-                                            spring(
-                                                dampingRatio = Spring.DampingRatioMediumBouncy,
-                                                stiffness = Spring.StiffnessLow,
-                                            ),
-                                        label = "MixPlaylistCardScale",
-                                    )
-
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .width(130.dp)
-                                                .graphicsLayer {
-                                                    scaleX = scale
-                                                    scaleY = scale
-                                                }.clip(RoundedCornerShape(32.dp))
-                                                .background(cardBgColor)
-                                                .clickable(
-                                                    interactionSource = interactionSource,
-                                                    indication = null,
-                                                    onClick = {
-                                                        if (!playlist.playlist.isEditable && playlist.songCount == 0 &&
-                                                            playlist.playlist.remoteSongCount != 0
-                                                        ) {
-                                                            navController.navigate("online_playlist/${playlist.playlist.browseId}")
-                                                        } else {
-                                                            navController.navigate("local_playlist/${playlist.id}")
-                                                        }
-                                                    },
-                                                ).padding(12.dp),
-                                    ) {
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .size(106.dp)
-                                                    .clip(RoundedCornerShape(24.dp)),
-                                        ) {
-                                            AsyncImage(
-                                                model = playlist.thumbnails.getOrNull(0),
-                                                contentDescription = null,
-                                                contentScale = ContentScale.Crop,
-                                                modifier = Modifier.fillMaxSize(),
-                                            )
-                                            // Play Overlay button
-                                            Box(
-                                                modifier =
-                                                    Modifier
-                                                        .align(Alignment.BottomEnd)
-                                                        .padding(6.dp)
-                                                        .size(28.dp)
-                                                        .clip(CircleShape)
-                                                        .background(MaterialTheme.colorScheme.primary)
-                                                        .clickable {
-                                                            playerConnection.let { conn ->
-                                                                coroutineScope.launch {
-                                                                    database.playlistSongs(playlist.id).firstOrNull()?.let { songs ->
-                                                                        if (songs.isNotEmpty()) {
-                                                                            conn.playQueue(
-                                                                                ListQueue(items = songs.map { it.song.toMediaItem() }),
-                                                                            )
-                                                                        }
-                                                                    }
-                                                                }
+                                    PlaylistGridItem(
+                                        playlist = playlist,
+                                        onPlay =
+                                            if (playlist.songCount > 0) {
+                                                {
+                                                    coroutineScope.launch {
+                                                        database.playlistSongs(playlist.id).firstOrNull()?.let { songs ->
+                                                            if (songs.isNotEmpty()) {
+                                                                playerConnection.playQueue(
+                                                                    ListQueue(items = songs.map { it.song.toMediaItem() }),
+                                                                )
                                                             }
-                                                        },
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(id = R.drawable.play),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onPrimary,
-                                                    modifier = Modifier.size(14.dp),
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = playlist.playlist.name,
-                                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onBackground,
-                                        )
-                                        Text(
-                                            text = "${playlist.songCount} ${stringResource(R.string.tracks_label)}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                                        )
-                                    }
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                null
+                                            },
+                                        modifier =
+                                            Modifier.clickable {
+                                                if (!playlist.playlist.isEditable && playlist.songCount == 0 &&
+                                                    playlist.playlist.remoteSongCount != 0
+                                                ) {
+                                                    navController.navigate("online_playlist/${playlist.playlist.browseId}")
+                                                } else {
+                                                    navController.navigate("local_playlist/${playlist.id}")
+                                                }
+                                            },
+                                    )
                                 }
 
                                 items(
@@ -578,42 +465,12 @@ fun LibraryMixScreen(
                                     )
                                 }
 
-                                // Ending "More" card
                                 item {
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .width(130.dp)
-                                                .height(168.dp)
-                                                .clip(RoundedCornerShape(32.dp))
-                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                                .clickable {
-                                                    onTabSelected(LibraryFilter.PLAYLISTS)
-                                                },
-                                        verticalArrangement = Arrangement.Center,
-                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    FilledTonalButton(
+                                        onClick = { onTabSelected(LibraryFilter.PLAYLISTS) },
+                                        modifier = Modifier.padding(horizontal = 8.dp),
                                     ) {
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .size(56.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.expand_more),
-                                                contentDescription = stringResource(R.string.more_playlists_desc),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(12.dp))
-                                        Text(
-                                            text = stringResource(R.string.more_label),
-                                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.onBackground,
-                                        )
+                                        Text(text = stringResource(R.string.more_playlists_desc))
                                     }
                                 }
                             }
@@ -653,75 +510,27 @@ fun LibraryMixScreen(
                                 )
                             }
                             LazyRow(
-                                contentPadding = PaddingValues(horizontal = 24.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                items(artists.take(10)) { item ->
-                                    val artist = item.artist
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .width(80.dp)
-                                                .clickable {
-                                                    navController.navigateToArtist(artist.id)
-                                                },
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        AsyncImage(
-                                            model = artist.thumbnailUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier =
-                                                Modifier
-                                                    .size(72.dp)
-                                                    .clip(CircleShape),
-                                        )
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = artist.name,
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                            color = MaterialTheme.colorScheme.onBackground,
-                                        )
-                                    }
+                                items(
+                                    items = artists.take(10),
+                                    key = { artist -> artist.id },
+                                    contentType = { "library_artist" },
+                                ) { artist ->
+                                    ArtistGridItem(
+                                        artist = artist,
+                                        modifier = Modifier.clickable { navController.navigateToArtist(artist.id) },
+                                    )
                                 }
 
-                                // Ending "+" button
                                 item {
-                                    Column(
-                                        modifier =
-                                            Modifier
-                                                .width(80.dp)
-                                                .clickable {
-                                                    onTabSelected(LibraryFilter.ARTISTS)
-                                                },
-                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    FilledTonalButton(
+                                        onClick = { onTabSelected(LibraryFilter.ARTISTS) },
+                                        modifier = Modifier.padding(horizontal = 8.dp),
                                     ) {
-                                        Box(
-                                            modifier =
-                                                Modifier
-                                                    .size(72.dp)
-                                                    .clip(CircleShape)
-                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(id = R.drawable.add),
-                                                contentDescription = stringResource(R.string.more_label),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text(
-                                            text = stringResource(R.string.more_label),
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                            color = MaterialTheme.colorScheme.onBackground,
-                                        )
+                                        Text(text = stringResource(R.string.see_all))
                                     }
                                 }
                             }
@@ -748,80 +557,34 @@ private fun SpotifyPlaylistCompactCard(
     modifier: Modifier = Modifier,
 ) {
     val thumbnailUrl = remember(playlist) { SpotifyMapper.getPlaylistThumbnail(playlist) }
-    val cardBgColor =
-        rememberArtworkCardColor(
-            thumbnailUrl = thumbnailUrl,
-            fallbackColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        )
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1.0f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "SpotifyPlaylistCompactCardScale",
-    )
+    val trackCount = playlist.tracks?.total
 
-    Column(
-        modifier =
-            modifier
-                .width(130.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                }.clip(RoundedCornerShape(32.dp))
-                .background(cardBgColor)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                ).padding(12.dp),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(106.dp)
-                    .clip(RoundedCornerShape(24.dp)),
-        ) {
-            AsyncImage(
-                model = thumbnailUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
+    GridItem(
+        title = playlist.name,
+        subtitle =
+            trackCount?.let { pluralStringResource(R.plurals.n_song, it, it) }
+                ?: stringResource(R.string.spotify_account),
+        badges = {
+            Icon(
+                painter = painterResource(R.drawable.spotify),
+                contentDescription = if (trackCount != null) stringResource(R.string.spotify_account) else null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
             )
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.spotify),
-                    contentDescription = stringResource(R.string.spotify_account),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(14.dp),
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = playlist.name,
-            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Text(
-            text = "${playlist.tracks?.total ?: 0} ${stringResource(R.string.tracks_label)}",
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-        )
-    }
+        },
+        thumbnailContent = {
+            ItemThumbnail(
+                thumbnailUrl = thumbnailUrl,
+                isActive = false,
+                isPlaying = false,
+                shape = MaterialTheme.shapes.medium,
+                contentScale = ContentScale.Crop,
+                placeholderIconRes = R.drawable.spotify,
+                showPlaceholder = true,
+            )
+        },
+        modifier = modifier.clickable(onClick = onClick),
+    )
 }
 
 @Composable

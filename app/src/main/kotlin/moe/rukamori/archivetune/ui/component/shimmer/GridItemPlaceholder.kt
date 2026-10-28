@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -23,7 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import moe.rukamori.archivetune.constants.GridThumbnailCornerRadius
-import moe.rukamori.archivetune.constants.GridThumbnailHeight
+import moe.rukamori.archivetune.ui.component.GridItem
 
 @Composable
 fun GridItemPlaceHolder(
@@ -31,25 +30,46 @@ fun GridItemPlaceHolder(
     thumbnailShape: Shape = RoundedCornerShape(GridThumbnailCornerRadius),
     fillMaxWidth: Boolean = false,
 ) {
+    if (!fillMaxWidth) {
+        GridItem(
+            modifier = modifier,
+            title = {
+                Column {
+                    TextPlaceholder()
+                    TextPlaceholder(modifier = Modifier.fillMaxWidth(0.7f))
+                }
+            },
+            subtitle = {
+                Column {
+                    TextPlaceholder(height = 8.dp)
+                    TextPlaceholder(height = 8.dp, modifier = Modifier.fillMaxWidth(0.6f))
+                }
+            },
+            thumbnailContent = {
+                Spacer(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(thumbnailShape)
+                            .background(MaterialTheme.colorScheme.onSurface),
+                )
+            },
+        )
+        return
+    }
+
     Column(
         modifier =
-            if (fillMaxWidth) {
-                modifier
-                    .padding(12.dp)
-                    .fillMaxWidth()
-            } else {
-                modifier
-                    .padding(12.dp)
-                    .width(GridThumbnailHeight)
-            },
+            modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
     ) {
         Spacer(
             modifier =
-                if (fillMaxWidth) {
-                    Modifier.fillMaxWidth()
-                } else {
-                    Modifier.height(GridThumbnailHeight)
-                }.aspectRatio(1f)
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
                     .clip(thumbnailShape)
                     .background(MaterialTheme.colorScheme.onSurface),
         )
