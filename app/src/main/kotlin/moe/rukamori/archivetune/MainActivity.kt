@@ -1195,10 +1195,10 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    LaunchedEffect(useDarkTheme, playerBottomSheetState.isExpanded, playerBackground, aodModeEnabled) {
+                    LaunchedEffect(useDarkTheme, playerBottomSheetState.isExpanded, playerBackground, aodModeEnabled, isAppUpdateScreen) {
                         if (aodModeEnabled) return@LaunchedEffect
                         val isDarkStatusBar =
-                            if (playerBottomSheetState.isExpanded &&
+                            if (!isAppUpdateScreen && playerBottomSheetState.isExpanded &&
                                 playerBackground != PlayerBackgroundStyle.DEFAULT
                             ) {
                                 true
@@ -1232,7 +1232,7 @@ class MainActivity : ComponentActivity() {
 
                     val shouldHideStatusBars =
                         (isYearInMusicScreen && isYearInMusicStory) ||
-                            (playerBottomSheetState.isExpandedOrExpanding &&
+                            (!isAppUpdateScreen && playerBottomSheetState.isExpandedOrExpanding &&
                                 playerDesignStyle == PlayerDesignStyle.V7)
 
                     LaunchedEffect(shouldHideStatusBars, aodModeEnabled) {
@@ -1281,12 +1281,13 @@ class MainActivity : ComponentActivity() {
                             bottomInset,
                             shouldShowNavigationBar,
                             playerBottomSheetState.isDismissed,
+                            isAppUpdateScreen,
                         ) {
                             var bottom = bottomInset
                             if (shouldShowNavigationBar && !useRail) {
                                 bottom += getBottomNavPadding() + floatingBarsBottomPadding
                             }
-                            if (!playerBottomSheetState.isDismissed) {
+                            if (!isAppUpdateScreen && !playerBottomSheetState.isDismissed) {
                                 bottom += MiniPlayerHeight + MiniPlayerBottomSpacing
                             }
                             windowsInsets
@@ -1691,10 +1692,10 @@ class MainActivity : ComponentActivity() {
                         }
 
                     val playerBackDispatcherOwner = checkNotNull(LocalNavigationEventDispatcherOwner.current)
-                    val screenBackEnabled by remember(playerBottomSheetState) {
+                    val screenBackEnabled by remember(playerBottomSheetState, isAppUpdateScreen) {
                         derivedStateOf {
-                            !playerBottomSheetState.isExpandedOrExpanding &&
-                                playerBottomSheetState.progress <= 0f
+                            isAppUpdateScreen ||
+                                (!playerBottomSheetState.isExpandedOrExpanding && playerBottomSheetState.progress <= 0f)
                         }
                     }
                     val screenBackDispatcherOwner =
@@ -2244,7 +2245,8 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
                                     },
-                                    bottomBar = {
+                                    bottomBar = playerBar@ {
+                                        if (isAppUpdateScreen) return@playerBar
                                         Box {
                                             val navigationProximityProvider: () -> Float =
                                                 remember(playerBottomSheetState, bottomNavigationBarHeightState) {
