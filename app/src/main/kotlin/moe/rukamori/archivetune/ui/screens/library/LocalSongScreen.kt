@@ -9,9 +9,7 @@ package moe.rukamori.archivetune.ui.screens.library
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.DocumentsContract
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -189,8 +187,12 @@ fun LocalSongScreen(
         )
     }
 
-    LaunchedEffect(viewModel, hasStoragePermission) {
-        if (hasStoragePermission) {
+    val canScan = remember(hasStoragePermission, scanConfig) {
+        hasStoragePermission || !scanConfig.requiresMediaPermission
+    }
+
+    LaunchedEffect(viewModel, canScan) {
+        if (canScan) {
             viewModel.scanDevice(scanConfig)
         }
     }
@@ -206,30 +208,21 @@ fun LocalSongScreen(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
-            val normalizedFolder = uri?.toFolderEntry() ?: return@rememberLauncherForActivityResult
-            onIncludedFoldersChange(
-                LocalSongScanConfig.deduplicateFolderEntries(includedFolders + normalizedFolder),
-            )
-            onExcludedFoldersChange(
-                excludedFolders
-                    .filterNot {
-                        LocalSongScanConfig.normalizeFolderEntry(it).equals(normalizedFolder, ignoreCase = true)
-                    }.toSet(),
-            )
+            uri?.let(viewModel::includeFolder)
         }
 
     val excludedFolderPickerLauncher =
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
-            val normalizedFolder = uri?.toFolderEntry() ?: return@rememberLauncherForActivityResult
+            val normalizedFolder = uri?.toString() ?: return@rememberLauncherForActivityResult
             onExcludedFoldersChange(
                 LocalSongScanConfig.deduplicateFolderEntries(excludedFolders + normalizedFolder),
             )
             onIncludedFoldersChange(
                 includedFolders
                     .filterNot {
-                        LocalSongScanConfig.normalizeFolderEntry(it).equals(normalizedFolder, ignoreCase = true)
+                        LocalSongScanConfig.sameFolder(it, normalizedFolder)
                     }.toSet(),
             )
         }
@@ -294,6 +287,7 @@ fun LocalSongScreen(
     if (showScanSheet) {
         LocalSongScanSheet(
             hasStoragePermission = hasStoragePermission,
+            canScan = canScan,
             scanState = scanState,
             minimumDurationSeconds = minimumDurationSeconds,
             onMinimumDurationSecondsChange = onMinimumDurationSecondsChange,
@@ -306,7 +300,7 @@ fun LocalSongScreen(
             sheetState = scanSheetState,
             onDismiss = { showScanSheet = false },
             onPrimaryAction = {
-                if (hasStoragePermission) {
+                if (canScan) {
                     viewModel.scanDevice(scanConfig)
                 } else {
                     permissionLauncher.launch(storagePermission)
@@ -683,6 +677,7 @@ private fun LocalSongEmptyState(query: String) {
 @Composable
 private fun LocalSongScanSheet(
     hasStoragePermission: Boolean,
+    canScan: Boolean,
     scanState: LocalSongsScanState,
     minimumDurationSeconds: Int,
     onMinimumDurationSecondsChange: (Int) -> Unit,
@@ -724,7 +719,7 @@ private fun LocalSongScanSheet(
         when {
             scanState.isScanning -> R.drawable.sync
             hasError -> R.drawable.error
-            !hasStoragePermission -> R.drawable.security
+            !canScan -> R.drawable.security
             hasSummary -> R.drawable.done
             else -> R.drawable.library_music
         }
@@ -733,7 +728,7 @@ private fun LocalSongScanSheet(
         when {
             hasError -> MaterialTheme.colorScheme.error
             scanState.isScanning -> MaterialTheme.colorScheme.primary
-            !hasStoragePermission -> MaterialTheme.colorScheme.tertiary
+            !canScan -> MaterialTheme.colorScheme.tertiary
             else -> MaterialTheme.colorScheme.primary
         }
 
@@ -741,7 +736,7 @@ private fun LocalSongScanSheet(
         when {
             hasError -> MaterialTheme.colorScheme.errorContainer
             scanState.isScanning -> MaterialTheme.colorScheme.primaryContainer
-            !hasStoragePermission -> MaterialTheme.colorScheme.tertiaryContainer
+            !canScan -> MaterialTheme.colorScheme.tertiaryContainer
             else -> MaterialTheme.colorScheme.primaryContainer
         }
 
@@ -755,7 +750,7 @@ private fun LocalSongScanSheet(
                 stringResource(R.string.local_songs_scan_failed)
             }
 
-            !hasStoragePermission -> {
+            !canScan -> {
                 stringResource(R.string.local_songs_permission_body)
             }
 
@@ -777,7 +772,7 @@ private fun LocalSongScanSheet(
         }
 
     val primaryButtonText =
-        if (hasStoragePermission) {
+        if (canScan) {
             stringResource(R.string.scan_device)
         } else {
             stringResource(R.string.allow)
@@ -1032,7 +1027,7 @@ private fun LocalSongScanSheet(
                             ) {
                                 sanitizedIncludedFolders.forEach { folderPath ->
                                     LocalSongFolderChip(
-                                        folderPath = folderPath,
+                                        folderPath = remember(folderPath) { LocalSongScanConfig.folderDisplayName(folderPath) },
                                         enabled = !scanState.isScanning,
                                         onRemove = {
                                             onIncludedFoldersChange(
@@ -1075,7 +1070,7 @@ private fun LocalSongScanSheet(
                             ) {
                                 sanitizedExcludedFolders.forEach { folderPath ->
                                     LocalSongFolderChip(
-                                        folderPath = folderPath,
+                                        folderPath = remember(folderPath) { LocalSongScanConfig.folderDisplayName(folderPath) },
                                         enabled = !scanState.isScanning,
                                         onRemove = {
                                             onExcludedFoldersChange(
@@ -1103,13 +1098,13 @@ private fun LocalSongScanSheet(
                 colors =
                     ButtonDefaults.buttonColors(
                         containerColor =
-                            if (hasStoragePermission) {
+                            if (canScan) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.tertiary
                             },
                         contentColor =
-                            if (hasStoragePermission) {
+                            if (canScan) {
                                 MaterialTheme.colorScheme.onPrimary
                             } else {
                                 MaterialTheme.colorScheme.onTertiary
@@ -1145,7 +1140,7 @@ private fun LocalSongScanSheet(
                             Icon(
                                 painter =
                                     painterResource(
-                                        if (hasStoragePermission) R.drawable.sync else R.drawable.security,
+                                        if (canScan) R.drawable.sync else R.drawable.security,
                                     ),
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
@@ -1392,16 +1387,6 @@ private fun ScanSheetInfoRow(
             trailing()
         }
     }
-}
-
-private fun Uri.toFolderEntry(): String? {
-    if (!DocumentsContract.isTreeUri(this)) return null
-    val treeDocumentId =
-        runCatching { DocumentsContract.getTreeDocumentId(this) }
-            .getOrNull()
-            .orEmpty()
-    val relativeFolder = treeDocumentId.substringAfter(':', missingDelimiterValue = treeDocumentId)
-    return LocalSongScanConfig.normalizeFolderEntry(relativeFolder).takeIf(String::isNotEmpty)
 }
 
 private enum class LocalSongSortType {

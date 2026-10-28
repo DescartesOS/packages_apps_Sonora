@@ -7,11 +7,15 @@
 
 package moe.rukamori.archivetune.localmedia
 
+import android.net.Uri
 import javax.inject.Inject
 
 class ScanLocalMusicUseCase @Inject constructor(
     private val scanner: LocalSongScanner,
+    private val foldersRepository: LocalMusicFoldersRepository,
 ) {
+    suspend fun includeFolder(uri: Uri): LocalSongScanConfig = foldersRepository.addIncludedFolder(uri)
+
     suspend operator fun invoke(config: LocalSongScanConfig): LocalSongScanSummary =
         scanner.scanDevice(
             config.copy(

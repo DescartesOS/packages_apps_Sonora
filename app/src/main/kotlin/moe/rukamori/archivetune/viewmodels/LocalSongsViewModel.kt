@@ -7,6 +7,7 @@
 
 package moe.rukamori.archivetune.viewmodels
 
+import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -14,6 +15,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -44,14 +46,23 @@ class LocalSongsViewModel @Inject constructor(
 
     fun scanDevice(scanConfig: LocalSongScanConfig = LocalSongScanConfig()) {
         if (scanJob?.isActive == true) return
+        scanJob = launchScan { scanLocalMusic(scanConfig) }
+    }
+
+    fun includeFolder(uri: Uri) {
+        scanJob?.cancel()
+        scanJob = launchScan { scanLocalMusic(scanLocalMusic.includeFolder(uri)) }
+    }
+
+    private fun launchScan(scan: suspend () -> LocalSongScanSummary): Job {
         _scanState.value = LocalSongsScanState.Loading
-        scanJob = viewModelScope.launch {
+        return viewModelScope.launch {
             try {
-                _scanState.value = LocalSongsScanState.Success(scanLocalMusic(scanConfig))
+                _scanState.value = LocalSongsScanState.Success(scan())
             } catch (cancelled: CancellationException) {
-                _scanState.value = LocalSongsScanState.Empty
                 throw cancelled
             } catch (error: Exception) {
+                coroutineContext.ensureActive()
                 reportException(error)
                 _scanState.value = LocalSongsScanState.Error(
                     if (error is SecurityException) R.string.local_songs_permission_body else R.string.local_songs_scan_failed,

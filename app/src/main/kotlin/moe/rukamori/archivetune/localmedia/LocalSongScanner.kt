@@ -7,12 +7,16 @@
 
 package moe.rukamori.archivetune.localmedia
 
+import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.compose.runtime.Immutable
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -60,15 +64,29 @@ data class LocalSongScanConfig(
     val sanitizedExcludedFolders: Set<String>
         get() = deduplicateFolderEntries(excludedFolders)
 
+    val requiresMediaPermission: Boolean
+        get() = includedFolders.isEmpty() || includedFolders.any { LocalMusicFolder.treeUri(it) == null }
+
     companion object {
         private val DuplicateSlashRegex = Regex("/+")
 
         fun normalizeFolderEntry(raw: String): String =
-            raw
+            LocalMusicFolder.treeUri(raw.trim())?.toString() ?: raw
                 .trim()
                 .replace('\\', '/')
                 .replace(DuplicateSlashRegex, "/")
                 .trim('/')
+
+        fun folderDisplayName(entry: String): String =
+            LocalMusicFolder.fromEntry(entry).let { it.path.ifEmpty { it.volume.orEmpty() } }
+
+        fun sameFolder(first: String, second: String): Boolean {
+            val firstFolder = LocalMusicFolder.fromEntry(first)
+            val secondFolder = LocalMusicFolder.fromEntry(second)
+            return firstFolder.path.equals(secondFolder.path, ignoreCase = true) &&
+                (firstFolder.volume == null || secondFolder.volume == null ||
+                    firstFolder.volume.equals(secondFolder.volume, ignoreCase = true))
+        }
 
         fun deduplicateFolderEntries(entries: Iterable<String>): Set<String> {
             val deduplicated = linkedMapOf<String, String>()
@@ -97,14 +115,25 @@ class LocalSongScanner @Inject constructor(
     private val metadataReader: LocalAudioMetadataReader,
     private val metadataRepository: LocalMetadataRepository,
     private val mediaIndexer: LocalMediaIndexer,
+    private val foldersRepository: LocalMusicFoldersRepository,
 ) {
     private val scanMutex = Mutex()
 
     suspend fun scanDevice(scanConfig: LocalSongScanConfig = LocalSongScanConfig()): LocalSongScanSummary =
         withContext(Dispatchers.IO) {
             scanMutex.withLock {
-                mediaIndexer.indexMissingAudio()
-                val scanned = queryTracks(scanConfig)
+                val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Manifest.permission.READ_MEDIA_AUDIO
+                } else Manifest.permission.READ_EXTERNAL_STORAGE
+                val canReadMediaStore = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                val needsDeviceScan = scanConfig.requiresMediaPermission
+                if (!canReadMediaStore && needsDeviceScan) {
+                    throw SecurityException("Audio library access has not been granted")
+                }
+                if (canReadMediaStore && needsDeviceScan) {
+                    mediaIndexer.indexMissingAudio()
+                }
+                val scanned = queryTracks(scanConfig, canReadMediaStore)
                 val ids = scanned.map(LocalTrackRecord::id)
                 val enriched = enrichTracks(scanned, loadSongs(ids), loadFormats(ids))
                 val summary = database.withTransaction {
@@ -354,9 +383,17 @@ class LocalSongScanner @Inject constructor(
             song.dateModified == track.dateModified && format.contentLength == track.sizeBytes
 
     @Suppress("DEPRECATION")
-    private suspend fun queryTracks(scanConfig: LocalSongScanConfig): List<LocalTrackRecord> {
-        val included = scanConfig.sanitizedIncludedFolders.map { it.lowercase(Locale.ROOT) }.toSet()
-        val excluded = scanConfig.sanitizedExcludedFolders.map { it.lowercase(Locale.ROOT) }.toSet()
+    private suspend fun queryTracks(scanConfig: LocalSongScanConfig, canReadMediaStore: Boolean): List<LocalTrackRecord> {
+        val included = scanConfig.sanitizedIncludedFolders.map { LocalMusicFolder.fromEntry(it) }
+        val excluded = scanConfig.sanitizedExcludedFolders.map { LocalMusicFolder.fromEntry(it) }
+        val readableTrees = context.contentResolver.persistedUriPermissions.filter { it.isReadPermission }.map { it.uri }.toSet()
+        val previousDocumentIds = database.localSongIds().mapNotNull { id ->
+            val uri = Uri.parse(id)
+            val identity = LocalMusicFolder.documentIdentity(uri) ?: return@mapNotNull null
+            if (!DocumentsContract.isTreeUri(uri)) return@mapNotNull null
+            val treeUri = DocumentsContract.buildTreeDocumentUri(uri.authority, DocumentsContract.getTreeDocumentId(uri))
+            if (treeUri in readableTrees) identity to id else null
+        }.toMap()
         val projection = buildList {
             add(MediaStore.Audio.Media._ID)
             add(MediaStore.Audio.Media.TITLE)
@@ -371,8 +408,11 @@ class LocalSongScanner @Inject constructor(
             add(MediaStore.Audio.Media.SIZE)
             add(MediaStore.Audio.Media.MIME_TYPE)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) add(MediaStore.Audio.Media.ALBUM_ARTIST)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) add(MediaStore.MediaColumns.RELATIVE_PATH)
-            else add(MediaStore.MediaColumns.DATA)
+            add(MediaStore.MediaColumns.DATA)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                add(MediaStore.MediaColumns.RELATIVE_PATH)
+                add(MediaStore.MediaColumns.VOLUME_NAME)
+            }
         }.toTypedArray()
         val selection = buildList {
             add("${MediaStore.Audio.Media.SIZE} > 0")
@@ -382,15 +422,18 @@ class LocalSongScanner @Inject constructor(
         val unknownArtist = context.getString(R.string.unknown_artist)
         val unknownTitle = context.getString(R.string.unknown)
         val tracks = mutableListOf<LocalTrackRecord>()
+        val discoveredFiles = hashSetOf<String>()
         val lyricsExtractor = EmbeddedLyricsExtractor(context.contentResolver)
-        val cursor = context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            projection,
-            selection,
-            null,
-            "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC, ${MediaStore.Audio.Media._ID} ASC",
-        ) ?: throw IOException("MediaStore returned no audio cursor")
-        cursor.use {
+        val cursor = if (canReadMediaStore) {
+            context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                null,
+                "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC, ${MediaStore.Audio.Media._ID} ASC",
+            ) ?: throw IOException("MediaStore returned no audio cursor")
+        } else null
+        cursor?.use {
             val idIndex = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleIndex = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val displayNameIndex = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
@@ -406,16 +449,22 @@ class LocalSongScanner @Inject constructor(
             val mimeIndex = it.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
             val relativeIndex = it.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
             val dataIndex = it.getColumnIndex(MediaStore.MediaColumns.DATA)
+            val volumeIndex = it.getColumnIndex(MediaStore.MediaColumns.VOLUME_NAME)
             while (it.moveToNext()) {
                 currentCoroutineContext().ensureActive()
-                val folder = resolveNormalizedFolderPath(it.getStringOrNull(relativeIndex), it.getStringOrNull(dataIndex))
-                if (!shouldIncludeFolder(folder, included) || shouldExcludeFolder(folder, excluded)) continue
+                val folder = LocalMusicFolder.fromMediaStore(
+                    it.getStringOrNull(relativeIndex), it.getStringOrNull(dataIndex), it.getStringOrNull(volumeIndex),
+                )
+                if ((included.isNotEmpty() && included.none { entry -> entry.contains(folder) }) ||
+                    excluded.any { entry -> entry.contains(folder) }
+                ) continue
                 val displayName = it.getStringOrNull(displayNameIndex)
                 val mime = it.getStringOrNull(mimeIndex)?.takeIf(String::isNotBlank) ?: "audio/*"
                 if (!SupportedLocalAudio.isSupported(displayName, mime)) continue
                 val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, it.getLong(idIndex))
                 val modified = it.getLong(modifiedIndex)
                 val size = it.getLong(sizeIndex).coerceAtLeast(0L)
+                val identity = folder.fileIdentity(displayName.orEmpty())
                 val metadata = metadataReader.read(uri, modified, size)
                 val duration = metadata.durationSeconds ?: (it.getLong(durationIndex).coerceAtLeast(0L) / 1000L)
                     .coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
@@ -425,7 +474,7 @@ class LocalSongScanner @Inject constructor(
                 val encodedTrack = it.getIntOrNull(trackIndex)?.takeIf { value -> value > 0 }
                 val albumId = it.getLongOrNull(albumIdIndex)?.takeIf { value -> value > 0L }
                 tracks += LocalTrackRecord(
-                    id = uri.toString(),
+                    id = previousDocumentIds[identity] ?: uri.toString(),
                     title = metadata.title ?: cleanTag(it.getStringOrNull(titleIndex))
                         ?: displayName?.substringBeforeLast('.')?.takeIf(String::isNotBlank) ?: unknownTitle,
                     artists = artist?.let(::splitArtistNames).orEmpty().ifEmpty { listOf(unknownArtist) },
@@ -444,6 +493,40 @@ class LocalSongScanner @Inject constructor(
                         ?.let { value -> ContentUris.withAppendedId(AlbumArtUri, value).toString() },
                     embeddedLyrics = lyricsExtractor.extract(contentUri = uri, displayName = displayName, mimeType = mime)
                         ?.let(LyricsUtils::lyricsOrNotFound)?.takeIf { value -> value != LyricsEntity.LYRICS_NOT_FOUND },
+                )
+                discoveredFiles += identity
+            }
+        }
+        val visitedDocuments = hashSetOf<String>()
+        scanConfig.sanitizedIncludedFolders.mapNotNull { LocalMusicFolder.treeUri(it) }.forEach { treeUri ->
+            foldersRepository.audioDocuments(treeUri, excluded).forEach documentLoop@ { document ->
+                currentCoroutineContext().ensureActive()
+                val identity = LocalMusicFolder.documentIdentity(document.uri) ?: document.uri.toString()
+                if (!visitedDocuments.add(identity) || identity in discoveredFiles) return@documentLoop
+                val id = previousDocumentIds[identity] ?: document.uri.toString()
+                val metadata = metadataReader.read(Uri.parse(id), document.dateModifiedSeconds, document.sizeBytes)
+                val duration = metadata.durationSeconds ?: 0
+                if (duration < scanConfig.sanitizedMinimumDurationSeconds) return@documentLoop
+                tracks += LocalTrackRecord(
+                    id = id,
+                    title = metadata.title ?: document.displayName?.substringBeforeLast('.')
+                        ?.takeIf(String::isNotBlank) ?: unknownTitle,
+                    artists = metadata.artist?.let(::splitArtistNames).orEmpty().ifEmpty { listOf(unknownArtist) },
+                    albumName = metadata.album,
+                    albumArtist = metadata.albumArtist,
+                    trackNumber = metadata.trackNumber,
+                    discNumber = metadata.discNumber,
+                    durationSeconds = duration,
+                    year = metadata.year,
+                    dateModified = document.dateModifiedSeconds.takeIf { it > 0L }
+                        ?.let { LocalDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneId.systemDefault()) },
+                    sizeBytes = document.sizeBytes,
+                    mimeType = document.mimeType,
+                    thumbnailUrl = metadata.thumbnailUrl,
+                    mediaStoreThumbnailUrl = null,
+                    embeddedLyrics = lyricsExtractor.extract(
+                        contentUri = Uri.parse(id), displayName = document.displayName, mimeType = document.mimeType,
+                    )?.let(LyricsUtils::lyricsOrNotFound)?.takeIf { it != LyricsEntity.LYRICS_NOT_FOUND },
                 )
             }
         }
@@ -496,53 +579,6 @@ class LocalSongScanner @Inject constructor(
 
         if (existingLyrics?.source == LyricsEntity.Source.EMBEDDED.value) {
             database.delete(existingLyrics)
-        }
-    }
-
-    private fun resolveNormalizedFolderPath(
-        relativePath: String?,
-        absolutePath: String?,
-    ): String? {
-        val relativeFolder = LocalSongScanConfig.normalizeFolderEntry(relativePath.orEmpty())
-        if (relativeFolder.isNotEmpty()) {
-            return relativeFolder.lowercase(Locale.ROOT)
-        }
-
-        val absoluteFolder =
-            absolutePath
-                ?.replace('\\', '/')
-                ?.substringBeforeLast('/', missingDelimiterValue = "")
-                .orEmpty()
-        val normalizedAbsoluteFolder = LocalSongScanConfig.normalizeFolderEntry(absoluteFolder)
-        return normalizedAbsoluteFolder.takeIf(String::isNotEmpty)?.lowercase(Locale.ROOT)
-    }
-
-    private fun shouldIncludeFolder(
-        folderPath: String?,
-        includedFolders: Set<String>,
-    ): Boolean {
-        if (includedFolders.isEmpty()) return true
-        return matchesFolderEntry(folderPath, includedFolders)
-    }
-
-    private fun shouldExcludeFolder(
-        folderPath: String?,
-        excludedFolders: Set<String>,
-    ): Boolean {
-        if (excludedFolders.isEmpty()) return false
-        return matchesFolderEntry(folderPath, excludedFolders)
-    }
-
-    private fun matchesFolderEntry(
-        folderPath: String?,
-        folders: Set<String>,
-    ): Boolean {
-        if (folderPath.isNullOrEmpty()) return false
-        return folders.any { folder ->
-            folderPath == folder ||
-                folderPath.startsWith("$folder/") ||
-                folderPath.endsWith("/$folder") ||
-                folderPath.contains("/$folder/")
         }
     }
 
