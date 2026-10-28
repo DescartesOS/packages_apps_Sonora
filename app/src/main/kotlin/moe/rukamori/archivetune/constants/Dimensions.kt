@@ -37,7 +37,6 @@ val SearchFilterHeight = 48.dp
 val ListThumbnailSize = 56.dp
 val SmallGridThumbnailHeight = 104.dp
 val GridThumbnailHeight = 128.dp
-val HorizontalGridThumbnailHeight = 152.dp
 val AlbumThumbnailSize = 144.dp
 
 val ThumbnailCornerRadius = 10.dp
