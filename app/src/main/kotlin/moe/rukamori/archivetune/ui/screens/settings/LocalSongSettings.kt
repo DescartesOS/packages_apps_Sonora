@@ -234,6 +234,7 @@ private fun LocalSongSettingsList(
             SegmentedListItem(
                 onClick = onAppSettings,
                 shapes = ListItemDefaults.segmentedShapes(index = 0, count = 2),
+                verticalAlignment = Alignment.CenterVertically,
                 leadingContent = { Icon(painterResource(R.drawable.security), null) },
                 supportingContent = {
                     Text(stringResource(if (model.hasMediaPermission) R.string.local_song_settings_permission_granted else R.string.local_song_settings_permission_optional))
@@ -247,6 +248,7 @@ private fun LocalSongSettingsList(
         item(key = "scan_scope", contentType = "access_setting") {
             SegmentedListItem(
                 shapes = ListItemDefaults.segmentedShapes(index = 1, count = 2),
+                verticalAlignment = Alignment.CenterVertically,
                 leadingContent = { Icon(painterResource(R.drawable.storage), null) },
                 supportingContent = {
                     Text(stringResource(if (model.includedFolders.isEmpty()) R.string.local_song_settings_scope_device else R.string.local_song_settings_scope_folders))
@@ -357,7 +359,7 @@ private fun LocalSongScanStatus(
         colors = CardDefaults.cardColors(containerColor = if (error == null) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.errorContainer),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Top) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     painterResource(when {
                         error != null -> R.drawable.error
@@ -420,6 +422,7 @@ private fun LocalSongDurationSetting(
     SegmentedListItem(
         shapes = ListItemDefaults.segmentedShapes(index = 0, count = 1),
         modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
         leadingContent = { Icon(painterResource(R.drawable.timer), null) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -482,6 +485,7 @@ private fun LocalSongFolderRow(
     }
     SegmentedListItem(
         shapes = ListItemDefaults.segmentedShapes(index = index, count = count), modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
         leadingContent = { Icon(painterResource(R.drawable.snippet_folder), null) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
