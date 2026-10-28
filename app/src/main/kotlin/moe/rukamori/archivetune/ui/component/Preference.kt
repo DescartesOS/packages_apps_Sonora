@@ -373,6 +373,51 @@ fun <T> ListPreference(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
 
+    ListPreference(
+        modifier = modifier,
+        title = title,
+        description = description,
+        icon = icon,
+        selectedValue = selectedValue,
+        values = values,
+        valueText = valueText,
+        valueDescription = valueDescription,
+        isValueEnabled = isValueEnabled,
+        showBottomSheet = showBottomSheet,
+        sheetState = sheetState,
+        onOpen = { showBottomSheet = true },
+        onDismiss = { showBottomSheet = false },
+        onValueSelected = { value ->
+            onValueSelected(value)
+            coroutineScope
+                .launch {
+                    sheetState.hide()
+                }.invokeOnCompletion {
+                    showBottomSheet = false
+                }
+        },
+        isEnabled = isEnabled,
+    )
+}
+
+@Composable
+fun <T> ListPreference(
+    modifier: Modifier = Modifier,
+    title: @Composable () -> Unit,
+    description: String? = null,
+    icon: (@Composable () -> Unit)? = null,
+    selectedValue: T,
+    values: List<T>,
+    valueText: @Composable (T) -> String,
+    valueDescription: (@Composable (T) -> String)? = null,
+    isValueEnabled: (T) -> Boolean = { true },
+    showBottomSheet: Boolean,
+    sheetState: SheetState,
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit,
+    onValueSelected: (T) -> Unit,
+    isEnabled: Boolean = true,
+) {
     if (showBottomSheet) {
         PreferenceSelectionBottomSheet(
             title = title,
@@ -382,16 +427,8 @@ fun <T> ListPreference(
             valueDescription = valueDescription,
             isValueEnabled = isValueEnabled,
             sheetState = sheetState,
-            onDismiss = { showBottomSheet = false },
-            onValueSelected = { value ->
-                onValueSelected(value)
-                coroutineScope
-                    .launch {
-                        sheetState.hide()
-                    }.invokeOnCompletion {
-                        showBottomSheet = false
-                    }
-            },
+            onDismiss = onDismiss,
+            onValueSelected = onValueSelected,
         )
     }
 
@@ -412,7 +449,7 @@ fun <T> ListPreference(
                 modifier = Modifier.size(22.dp),
             )
         },
-        onClick = { showBottomSheet = true },
+        onClick = onOpen,
         isEnabled = isEnabled,
     )
 }

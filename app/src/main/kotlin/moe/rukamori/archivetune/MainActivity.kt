@@ -192,6 +192,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -202,8 +203,6 @@ import moe.rukamori.archivetune.aod.ACTION_AOD_MODE
 import moe.rukamori.archivetune.constants.AodAutoStartScreenOffKey
 import moe.rukamori.archivetune.constants.AppBarHeight
 import moe.rukamori.archivetune.constants.AppFontPreference
-import moe.rukamori.archivetune.constants.AppLanguageKey
-import moe.rukamori.archivetune.constants.UseSystemLanguageKey
 import moe.rukamori.archivetune.constants.CustomFontUriKey
 import moe.rukamori.archivetune.constants.CustomThemeColorKey
 import moe.rukamori.archivetune.constants.WallpaperExtractionFailedKey
@@ -315,8 +314,8 @@ import moe.rukamori.archivetune.ui.utils.backToMain
 import moe.rukamori.archivetune.ui.utils.navigateToAlbum
 import moe.rukamori.archivetune.ui.utils.navigateToArtist
 import moe.rukamori.archivetune.ui.utils.resetHeightOffset
+import moe.rukamori.archivetune.settings.AppLanguageSettingsUseCases
 import moe.rukamori.archivetune.updates.ObserveUpdateSettingsUseCase
-import moe.rukamori.archivetune.utils.PreferenceStore
 import moe.rukamori.archivetune.utils.SyncUtils
 import moe.rukamori.archivetune.utils.Updater
 import moe.rukamori.archivetune.utils.dataStore
@@ -355,6 +354,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var observeUpdateSettings: ObserveUpdateSettingsUseCase
 
+    @Inject
+    lateinit var appLanguageSettings: AppLanguageSettingsUseCases
+
     private lateinit var navController: NavHostController
     private var pendingIntent: Intent? = null
     private var pendingDeepLinkQueue: Queue? = null
@@ -367,6 +369,7 @@ class MainActivity : ComponentActivity() {
     private var pendingTogetherJoinLink: String? = null
     private var pendingBackupRestoreUri by mutableStateOf<Uri?>(null)
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
+    private var appLocaleInitialized by mutableStateOf(false)
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
     private var isMusicServiceBound = false
@@ -589,31 +592,26 @@ class MainActivity : ComponentActivity() {
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val initialLocale =
-            if (PreferenceStore.get(UseSystemLanguageKey) ?: true) {
-                Locale.getDefault()
-            } else {
-                Locale.ENGLISH
-            }
-        setAppLocale(this, initialLocale)
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            runCatching {
-                dataStore.data.first().let { prefs ->
-                    if (prefs[UseSystemLanguageKey] ?: true) {
-                        Locale.getDefault()
-                    } else {
-                        Locale.ENGLISH
-                    }
+        lifecycleScope.launch {
+            appLanguageSettings.observeSettings()
+                .map(appLanguageSettings::locale)
+                .distinctUntilChanged()
+                .catch { exception ->
+                    if (exception is CancellationException) throw exception
+                    reportException(exception)
+                    Toast.makeText(this@MainActivity, R.string.error_unknown, Toast.LENGTH_LONG).show()
+                    appLocaleInitialized = true
                 }
-            }.onSuccess { targetLocale ->
-                if (targetLocale != initialLocale) {
-                    withContext(Dispatchers.Main) {
-                        setAppLocale(this@MainActivity, targetLocale)
+                .collect { locale ->
+                    val localeChanged = resources.configuration.locales[0] != locale
+                    if (localeChanged) {
+                        setAppLocale(this@MainActivity, locale)
+                    }
+                    if (appLocaleInitialized && localeChanged) {
                         recreate()
                     }
+                    appLocaleInitialized = true
                 }
-            }
         }
 
         lifecycleScope.launch(Dispatchers.IO) {
@@ -635,6 +633,8 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            if (!appLocaleInitialized) return@setContent
+
             val gatekeeperViewModel: GatekeeperViewModel = hiltViewModel()
             LaunchedEffect(Unit) {
                 gatekeeperViewModel.blockedMessages.collect { message ->
