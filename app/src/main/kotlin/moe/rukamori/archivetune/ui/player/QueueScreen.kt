@@ -12,6 +12,8 @@ package moe.rukamori.archivetune.ui.player
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -74,8 +76,20 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.utils.joinByBullet
+import sh.calvin.reorderable.DragGestureDetector
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+
+private val QueueDragGestureDetector = DragGestureDetector { onDragStart, onDragEnd, onDragCancel, onDrag ->
+    detectDragGestures(
+        orientationLock = Orientation.Vertical,
+        shouldAwaitTouchSlop = { false },
+        onDragStart = { _, change, _ -> onDragStart(change.position) },
+        onDragEnd = { onDragEnd() },
+        onDragCancel = onDragCancel,
+        onDrag = onDrag,
+    )
+}
 
 @Composable
 fun QueueScreen(
@@ -120,9 +134,6 @@ fun QueueScreen(
             val source = from.key as? String
             val target = to.key as? String
             if (source != null && target != null) onAction(QueueAction.Drag(source, target))
-        }
-        LaunchedEffect(reorderable.isAnyItemDragging) {
-            if (!reorderable.isAnyItemDragging) onAction(QueueAction.FinishDrag)
         }
         LaunchedEffect(visible) {
             if (visible) {
@@ -176,7 +187,10 @@ fun QueueScreen(
                             LaunchedEffect(swipe.currentValue) {
                                 if (swipe.currentValue != SwipeToDismissBoxValue.Settled) onAction(QueueAction.Remove(entry.id))
                             }
-                            val handle = if (model.locked) Modifier else Modifier.draggableHandle()
+                            val handle = Modifier.draggableHandle(
+                                enabled = !model.locked,
+                                dragGestureDetector = QueueDragGestureDetector,
+                            )
                             val previousId = model.entries.values.getOrNull(index - 1)?.id
                             val nextId = model.entries.values.getOrNull(index + 1)?.id
                             val playing = entry.current && model.playing
@@ -196,12 +210,9 @@ fun QueueScreen(
                                 index < currentIndex -> currentIndex
                                 else -> model.entries.values.size - currentIndex - 1
                             }
-                            val content: @Composable () -> Unit = remember(entry, groupIndex, groupCount, controls, dragging, pureBlack, visible, onAction, handle) {
-                                { QueueSongRow(entry, groupIndex, groupCount, controls, dragging, pureBlack, visible, onAction, handle) }
-                            }
-                            if (model.locked || model.selectionCount > 0 || dragging) content()
-                            else SwipeToDismissBox(
+                            SwipeToDismissBox(
                                 state = swipe,
+                                gesturesEnabled = !model.locked && !selecting && !reorderable.isAnyItemDragging,
                                 backgroundContent = {
                                     if (swipe.dismissDirection != SwipeToDismissBoxValue.Settled) {
                                         Box(
@@ -217,7 +228,9 @@ fun QueueScreen(
                                         }
                                     }
                                 },
-                            ) { content() }
+                            ) {
+                                QueueSongRow(entry, groupIndex, groupCount, controls, dragging, pureBlack, visible, onAction, handle)
+                            }
                         }
                     }
                 }
@@ -269,14 +282,12 @@ private fun QueueSongRow(
                 controls.previousId?.let { id ->
                     add(CustomAccessibilityAction(moveUp) {
                         onAction(QueueAction.Drag(entry.id, id))
-                        onAction(QueueAction.FinishDrag)
                         true
                     })
                 }
                 controls.nextId?.let { id ->
                     add(CustomAccessibilityAction(moveDown) {
                         onAction(QueueAction.Drag(entry.id, id))
-                        onAction(QueueAction.FinishDrag)
                         true
                     })
                 }

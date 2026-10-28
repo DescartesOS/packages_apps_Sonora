@@ -52,8 +52,6 @@ class QueueViewModel @Inject constructor(
     val chrome = mutableChrome.asStateFlow()
     private var latest: QueueUiModel? = null
     private var selected = emptySet<String>()
-    private var dragOrder: List<String>? = null
-    private var draggedId: String? = null
     private var overflow = false
     private var playlist = false
     private var createPlaylist = false
@@ -88,7 +86,6 @@ class QueueViewModel @Inject constructor(
                 observationError = null
                 latest = model
                 selected = selected.intersect(model?.entries?.values.orEmpty().mapTo(mutableSetOf()) { it.id })
-                if (model?.locked == true) { dragOrder = null; draggedId = null }
                 publish()
             }
         }
@@ -104,11 +101,9 @@ class QueueViewModel @Inject constructor(
 
     fun dismissQueue() {
         savedStateHandle[QueueVisibilityKey] = false
-        if (selected.isNotEmpty() || overflow || dragOrder != null) {
+        if (selected.isNotEmpty() || overflow) {
             selected = emptySet()
             overflow = false
-            dragOrder = null
-            draggedId = null
             publish()
         }
     }
@@ -127,9 +122,7 @@ class QueueViewModel @Inject constructor(
             mutableState.value = observationError?.let { QueueScreenState.Error(it) } ?: QueueScreenState.Empty
             return
         }
-        val rows = model.entries.values.associateBy { it.id }
-        val order = dragOrder?.let { it.filter(rows::containsKey) + rows.keys.filterNot(it::contains) }
-        val entries = (order?.mapNotNull(rows::get) ?: model.entries.values).map { it.copy(selected = it.id in selected) }
+        val entries = model.entries.values.map { it.copy(selected = it.id in selected) }
         val updated = model.copy(
             entries = QueueEntries(entries), selectionCount = selected.size, overflowOpen = overflow,
             playlistDialog = playlist, createPlaylistDialog = createPlaylist, savingPlaylist = playlistJob?.isActive == true,
@@ -190,25 +183,12 @@ class QueueViewModel @Inject constructor(
             is QueueAction.PlaylistName -> { playlistName = action.value; publish() }
             is QueueAction.Drag -> {
                 if (model.locked) return
-                val order = (dragOrder ?: model.entries.values.map { it.id }).toMutableList()
+                val order = model.entries.values.map { it.id }.toMutableList()
                 val source = order.indexOf(action.from)
                 val target = order.indexOf(action.to)
-                if (source < 0 || target < 0) return
+                if (source < 0 || target < 0 || source == target) return
                 order.add(target, order.removeAt(source))
-                draggedId = action.from
-                dragOrder = order
-                publish()
-            }
-            QueueAction.FinishDrag -> {
-                val id = draggedId
-                val order = dragOrder
-                if (!model.locked && id != null && order != null) {
-                    val index = order.indexOf(id)
-                    edit.move(id, order.getOrNull(index - 1))
-                }
-                dragOrder = null
-                draggedId = null
-                publish()
+                edit.move(action.from, order.getOrNull(target - 1))
             }
             QueueAction.Retry -> edit.refresh(force = true)
         }
