@@ -81,6 +81,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -144,6 +145,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.LocalDownloadUtil
 import moe.rukamori.archivetune.LocalPlayerConnection
@@ -154,6 +157,7 @@ import moe.rukamori.archivetune.ui.utils.navigateToArtist
 import moe.rukamori.archivetune.viewmodels.CanvasPlaybackViewModel
 import moe.rukamori.archivetune.viewmodels.CanvasPlaybackState
 import moe.rukamori.archivetune.viewmodels.ImmersivePlayerViewModel
+import moe.rukamori.archivetune.viewmodels.QueueViewModel
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import moe.rukamori.archivetune.constants.BackdropBlurAmountKey
 import moe.rukamori.archivetune.constants.BackdropEnabledKey
@@ -184,7 +188,7 @@ import moe.rukamori.archivetune.ui.component.BottomSheet
 import moe.rukamori.archivetune.ui.component.BottomSheetState
 import moe.rukamori.archivetune.ui.component.LocalBottomSheetPageState
 import moe.rukamori.archivetune.ui.component.LocalMenuState
-import moe.rukamori.archivetune.ui.component.rememberBottomSheetState
+import moe.rukamori.archivetune.ui.component.EXPANDED_ANCHOR
 import moe.rukamori.archivetune.ui.menu.AddToPlaylistDialog
 import moe.rukamori.archivetune.ui.menu.PlayerMenu
 import moe.rukamori.archivetune.ui.player.immersive.ImmersivePlayerEvent
@@ -304,6 +308,7 @@ fun BottomSheetPlayer(
     navigationBarMode: NavigationBarMode = NavigationBarMode.CONNECTED,
     canvasViewModel: CanvasPlaybackViewModel = hiltViewModel(),
     immersivePlayerViewModel: ImmersivePlayerViewModel = hiltViewModel(),
+    queueViewModel: QueueViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val menuState = LocalMenuState.current
@@ -961,37 +966,38 @@ fun BottomSheetPlayer(
             QueuePeekHeight
         }
 
-    val dismissedBound = dynamicQueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    val queueCollapsedHeight = dynamicQueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    val queueVisible by queueViewModel.isQueueVisible.collectAsStateWithLifecycle()
 
-    val queueSheetState =
-        rememberBottomSheetState(
-            dismissedBound = dismissedBound,
-            expandedBound = state.expandedBound,
-            collapsedBound = dismissedBound,
-            initialAnchor = 0,
-        )
+    LaunchedEffect(state, queueViewModel) {
+        snapshotFlow { state.targetAnchor }.drop(1).collect { anchor ->
+            if (anchor != EXPANDED_ANCHOR) queueViewModel.dismissQueue()
+        }
+    }
+    LaunchedEffect(aodModeEnabled, queueViewModel) {
+        if (aodModeEnabled) queueViewModel.dismissQueue()
+    }
 
     var isLyricsScreenVisible by rememberSaveable {
         mutableStateOf(false)
     }
     val openQueue =
-        remember(state, queueSheetState) {
+        remember(state, queueViewModel) {
             {
                 isLyricsScreenVisible = false
                 if (!state.isExpandedOrExpanding) {
                     state.expandSoft()
                 }
-                queueSheetState.expandSoft()
+                queueViewModel.openQueue()
             }
         }
 
     val isPlayerVisible by remember(state) {
         derivedStateOf { state.isExpandedOrExpanding || state.progress > 0f }
     }
-    BackHandler(enabled = !aodModeEnabled && isPlayerVisible) {
+    BackHandler(enabled = !aodModeEnabled && isPlayerVisible && !queueVisible) {
         when {
             isLyricsScreenVisible -> isLyricsScreenVisible = false
-            queueSheetState.isExpandedOrExpanding -> queueSheetState.collapseSoft()
             state.isExpandedOrExpanding -> state.collapseSoft()
         }
     }
@@ -1396,7 +1402,7 @@ fun BottomSheetPlayer(
                         backdropBlurAmount = backdropBlurAmount,
                         showVolumeBar = showPlayerVolumeBar,
                         showCodecOnPlayer = showCodecOnPlayer,
-                        contentBottomPadding = queueSheetState.collapsedBound,
+                        contentBottomPadding = queueCollapsedHeight,
                         onAction = immersivePlayerViewModel::onAction,
                         modifier =
                             Modifier
@@ -1450,7 +1456,7 @@ fun BottomSheetPlayer(
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .padding(bottom = queueSheetState.collapsedBound)
+                                        .padding(bottom = queueCollapsedHeight)
                                         .windowInsetsPadding(
                                             WindowInsets.systemBars.only(
                                                 WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -1490,7 +1496,7 @@ fun BottomSheetPlayer(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(bottom = queueSheetState.collapsedBound)
+                                    .padding(bottom = queueCollapsedHeight)
                                     .windowInsetsPadding(
                                         WindowInsets.systemBars.only(
                                             WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -1560,7 +1566,7 @@ fun BottomSheetPlayer(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(bottom = queueSheetState.collapsedBound)
+                                    .padding(bottom = queueCollapsedHeight)
                                     .windowInsetsPadding(
                                         WindowInsets.systemBars.only(
                                             WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -1573,7 +1579,7 @@ fun BottomSheetPlayer(
                     LandscapePlayerLayout(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = queueSheetState.collapsedBound)
+                            .padding(bottom = queueCollapsedHeight)
                             .windowInsetsPadding(
                                 WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal),
                             ),
@@ -1690,7 +1696,7 @@ fun BottomSheetPlayer(
                         backdropBlurAmount = backdropBlurAmount,
                         showVolumeBar = showPlayerVolumeBar,
                         showCodecOnPlayer = showCodecOnPlayer,
-                        contentBottomPadding = queueSheetState.collapsedBound,
+                        contentBottomPadding = queueCollapsedHeight,
                         onAction = immersivePlayerViewModel::onAction,
                         modifier =
                             Modifier
@@ -1743,7 +1749,7 @@ fun BottomSheetPlayer(
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .padding(bottom = queueSheetState.collapsedBound)
+                                        .padding(bottom = queueCollapsedHeight)
                                         .windowInsetsPadding(
                                             WindowInsets.systemBars.only(
                                                 WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -1782,7 +1788,7 @@ fun BottomSheetPlayer(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(bottom = queueSheetState.collapsedBound)
+                                    .padding(bottom = queueCollapsedHeight)
                                     .windowInsetsPadding(
                                         WindowInsets.systemBars.only(
                                             WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -1852,7 +1858,7 @@ fun BottomSheetPlayer(
                             modifier =
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(bottom = queueSheetState.collapsedBound)
+                                    .padding(bottom = queueCollapsedHeight)
                                     .windowInsetsPadding(
                                         WindowInsets.systemBars.only(
                                             WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -1870,7 +1876,7 @@ fun BottomSheetPlayer(
                                     WindowInsets.systemBars.only(
                                         WindowInsetsSides.Horizontal,
                                     ),
-                                ).padding(bottom = queueSheetState.collapsedBound),
+                                ).padding(bottom = queueCollapsedHeight),
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -1894,39 +1900,17 @@ fun BottomSheetPlayer(
             }
         }
 
-        val queueOnBackgroundColor = if (useBlackBackground) Color.White else MaterialTheme.colorScheme.onSurface
-        val queueSurfaceColor = if (useBlackBackground) Color.Black else MaterialTheme.colorScheme.surface
-
-        val (queueTextButtonColor, queueIconButtonColor) =
-            when (playerButtonsStyle) {
-                PlayerButtonsStyle.DEFAULT -> {
-                    Pair(queueOnBackgroundColor, queueSurfaceColor)
-                }
-
-                PlayerButtonsStyle.SECONDARY -> {
-                    Pair(
-                        MaterialTheme.colorScheme.secondary,
-                        MaterialTheme.colorScheme.onSecondary,
-                    )
-                }
-            }
-
-        Queue(
-            state = queueSheetState,
+        QueueFooter(
             playerBottomSheetState = state,
             navController = navController,
-            backgroundColor =
-                if (useBlackBackground) {
-                    Color.Black
-                } else {
-                    MaterialTheme.colorScheme.surfaceContainer
-                },
-            onBackgroundColor = queueOnBackgroundColor,
+            viewModel = queueViewModel,
+            peekHeight = dynamicQueuePeekHeight,
+            onExpandQueue = openQueue,
+            onShowLyrics = { isLyricsScreenVisible = true },
             TextBackgroundColor = TextBackgroundColor,
             textButtonColor = textButtonColor,
             iconButtonColor = iconButtonColor,
-            onShowLyrics = { isLyricsScreenVisible = true },
-            pureBlack = pureBlack,
+            modifier = Modifier.align(Alignment.BottomCenter),
         )
 
         mediaMetadata?.let { metadata ->
@@ -1976,6 +1960,13 @@ fun BottomSheetPlayer(
             )
         }
     }
+
+    Queue(
+        playerBottomSheetState = state,
+        navController = navController,
+        viewModel = queueViewModel,
+        pureBlack = useBlackBackground,
+    )
 
     val activePlaybackError = playbackError
     val isRecoveryDestination =
