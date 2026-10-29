@@ -11,7 +11,6 @@ package moe.rukamori.archivetune.ui.screens
 
 import android.content.Context
 import android.view.accessibility.AccessibilityManager
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
@@ -247,7 +246,11 @@ internal fun RecapStories(
                     val effects = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
                     key(chapter) {
                         val visible = remember { MutableTransitionState(false).apply { targetState = true } }
-                        AnimatedVisibility(visible, enter = fadeIn(effects), exit = ExitTransition.None) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visibleState = visible,
+                            enter = fadeIn(effects),
+                            exit = ExitTransition.None,
+                        ) {
                             RecapScene(data, chapter, text, scroll, onReplay = { paused = false; callbacks.replay() },
                                 onClose = { callbacks.story(false) })
                         }
