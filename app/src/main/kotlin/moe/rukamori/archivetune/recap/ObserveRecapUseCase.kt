@@ -57,6 +57,7 @@ class ObserveRecapUseCase @Inject constructor(private val repository: RecapRepos
             previous = day
         }
         val chapters = buildList {
+            add(RecapChapter.INTRO)
             add(RecapChapter.TIME)
             if (songs.isNotEmpty()) {
                 add(RecapChapter.TRACK)
@@ -67,12 +68,18 @@ class ObserveRecapUseCase @Inject constructor(private val repository: RecapRepos
             add(RecapChapter.MONTHS)
             add(RecapChapter.HABITS)
             add(RecapChapter.SUMMARY)
+            add(RecapChapter.END)
         }
+        val monthArtists = monthlyArtists.distinctBy { it.month }.associateBy { it.month }
         return RecapData(
             year, month, today, totals.milliseconds, totals.plays, totals.tracks,
             songs.entries(RecapEntryKind.SONG), artists.entries(RecapEntryKind.ARTIST), albums.entries(RecapEntryKind.ALBUM),
             ImmutableList.copyOf((1..12).map {
-                RecapMonth(it, monthly[it - 1], year < today.year || year == today.year && it <= today.monthValue)
+                RecapMonth(it, monthly[it - 1], year < today.year || year == today.year && it <= today.monthValue,
+                    monthArtists[it]?.let { artist ->
+                        RecapEntry(artist.id, artist.title, "", artist.artwork, artist.milliseconds,
+                            artist.plays, RecapEntryKind.ARTIST)
+                    })
             }),
             RecapHabits(days.size, longest, monthly.peak()?.plus(1), weekdays.peak()?.plus(1), hours.peak()),
             ImmutableList.copyOf(chapters),

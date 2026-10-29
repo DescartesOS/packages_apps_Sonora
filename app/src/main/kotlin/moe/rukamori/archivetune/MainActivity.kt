@@ -1222,8 +1222,8 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(false)
                     }
 
-                    LaunchedEffect(miniPlayerAnchor, isYearInMusicScreen, miniPlayerAnchorPersistenceEnabled) {
-                        if (!isYearInMusicScreen && miniPlayerAnchorPersistenceEnabled) {
+                    LaunchedEffect(miniPlayerAnchor, isYearInMusicStory, miniPlayerAnchorPersistenceEnabled) {
+                        if (!isYearInMusicStory && miniPlayerAnchorPersistenceEnabled) {
                             setSavedMiniPlayerAnchor(miniPlayerAnchor)
                         }
                     }
@@ -1240,11 +1240,9 @@ class MainActivity : ComponentActivity() {
                         setStatusBarsHidden(shouldHideStatusBars)
                     }
 
-                    LaunchedEffect(isYearInMusicScreen, playerConnection) {
+                    LaunchedEffect(isYearInMusicStory, playerConnection) {
                         val connection = playerConnection ?: return@LaunchedEffect
-                        val player = connection.player
-
-                        if (isYearInMusicScreen) {
+                        if (isYearInMusicStory) {
                             if (yearInMusicSavedPlayerAnchor == -1) {
                                 yearInMusicSavedPlayerAnchor =
                                     when {
@@ -1468,7 +1466,7 @@ class MainActivity : ComponentActivity() {
 
                     var restoredMiniPlayerAnchor by remember(playerConnection) { mutableStateOf(false) }
 
-                    LaunchedEffect(playerConnection, savedMiniPlayerAnchor, isYearInMusicScreen, playerBottomSheetState) {
+                    LaunchedEffect(playerConnection, savedMiniPlayerAnchor, isYearInMusicStory, playerBottomSheetState) {
                         if (restoredMiniPlayerAnchor) return@LaunchedEffect
                         val connection = playerConnection ?: return@LaunchedEffect
                         connection.queueRestoreCompleted.first { it }
@@ -1477,7 +1475,7 @@ class MainActivity : ComponentActivity() {
                                 playerBottomSheetState.dismiss()
                             }
                         } else {
-                            if (!isYearInMusicScreen) {
+                            if (!isYearInMusicStory) {
                                 when (savedMiniPlayerAnchor) {
                                     EXPANDED_ANCHOR -> playerBottomSheetState.expandSoft()
                                     COLLAPSED_ANCHOR -> playerBottomSheetState.collapseSoft()
@@ -1491,7 +1489,7 @@ class MainActivity : ComponentActivity() {
                     }
 
                     val currentPlayerBottomSheetState = rememberUpdatedState(playerBottomSheetState)
-                    val currentIsYearInMusicScreen = rememberUpdatedState(isYearInMusicScreen)
+                    val currentIsYearInMusicStory = rememberUpdatedState(isYearInMusicStory)
 
                     DisposableEffect(playerConnection) {
                         val player =
@@ -1506,7 +1504,7 @@ class MainActivity : ComponentActivity() {
                                         player.playbackState != Player.STATE_IDLE &&
                                         player.playbackState != Player.STATE_ENDED &&
                                         currentPlayerBottomSheetState.value.isDismissed &&
-                                        !currentIsYearInMusicScreen.value
+                                        !currentIsYearInMusicStory.value
                                     ) {
                                         currentPlayerBottomSheetState.value.collapseSoft()
                                     }

@@ -20,10 +20,15 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 internal object RecapAppearance {
-    const val Background = 0xFF101014.toInt()
+    const val Background = 0xFF132D53.toInt()
     const val Foreground = 0xFFF5F5F7.toInt()
-    const val Secondary = 0xFFACACB4.toInt()
-    const val Surface = 0xFF222228.toInt()
+    const val Secondary = 0xFFD9E8F2.toInt()
+    const val Surface = 0xFF326C9B.toInt()
+    const val Cream = 0xFFF9EAB9.toInt()
+    const val Mint = 0xFF9ED5B5.toInt()
+    const val Sky = 0xFF52B8D3.toInt()
+    const val Blue = 0xFF326AD8.toInt()
+    const val Ink = 0xFF20291F.toInt()
 }
 
 internal data class RecapFact(val label: String, val value: String)
@@ -37,6 +42,7 @@ internal class RecapText(private val context: Context) {
     fun plays(value: Long): String = context.resources.getQuantityString(
         R.plurals.recap_plays_value, value.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), number(value),
     )
+    fun days(value: Int): String = context.resources.getQuantityString(R.plurals.recap_days_value, value, number(value.toLong()))
     fun month(month: Int, short: Boolean = false): String = Month.of(month).getDisplayName(
         if (short) TextStyle.SHORT else TextStyle.FULL, locale,
     )
@@ -52,6 +58,7 @@ internal class RecapText(private val context: Context) {
     }
 
     fun chapterTitle(chapter: RecapChapter): String = context.getString(when (chapter) {
+        RecapChapter.INTRO -> R.string.recap_story_intro
         RecapChapter.TIME -> R.string.year_in_music_minutes_label
         RecapChapter.TRACK -> R.string.year_in_music_top_track
         RecapChapter.SONGS -> R.string.top_songs
@@ -60,6 +67,7 @@ internal class RecapText(private val context: Context) {
         RecapChapter.MONTHS -> R.string.recap_months
         RecapChapter.HABITS -> R.string.recap_habits
         RecapChapter.SUMMARY -> R.string.recap_summary
+        RecapChapter.END -> R.string.recap_story_end
     })
 
     fun facts(data: RecapData): ImmutableList<RecapFact> = ImmutableList.copyOf(buildList {

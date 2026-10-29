@@ -13,7 +13,7 @@ import java.time.LocalDate
 
 enum class RecapEntryKind { SONG, ARTIST, ALBUM }
 
-enum class RecapChapter { TIME, TRACK, SONGS, ARTISTS, ALBUMS, MONTHS, HABITS, SUMMARY }
+enum class RecapChapter { INTRO, TIME, TRACK, SONGS, ARTISTS, ALBUMS, MONTHS, HABITS, SUMMARY, END }
 
 @Immutable
 data class RecapEntry(
@@ -27,7 +27,12 @@ data class RecapEntry(
 )
 
 @Immutable
-data class RecapMonth(val month: Int, val milliseconds: Long, val available: Boolean)
+data class RecapMonth(
+    val month: Int,
+    val milliseconds: Long,
+    val available: Boolean,
+    val artist: RecapEntry? = null,
+)
 
 @Immutable
 data class RecapHabits(
@@ -59,20 +64,25 @@ data class RecapSelection(
     val year: Int,
     val years: ImmutableList<Int>,
     val story: Boolean = false,
-    val chapter: RecapChapter = RecapChapter.TIME,
+    val chapter: RecapChapter = RecapChapter.INTRO,
     val month: Int? = null,
     val yearPickerOpen: Boolean = false,
     val sharing: Boolean = false,
     val actionMessage: Int? = null,
     val playback: RecapPlayback = RecapPlayback(),
+    val soundtrackStarting: Boolean = false,
+    val soundtrackFailed: Boolean = false,
 )
 
 @Immutable
 data class RecapPlayback(
     val available: Boolean = false,
     val currentId: String? = null,
-    val title: String = "",
     val playing: Boolean = false,
+    val buffering: Boolean = false,
+    val muted: Boolean = false,
+    val failed: Boolean = false,
+    val recapQueue: Boolean = false,
 )
 
 sealed interface RecapMonthState {
@@ -95,6 +105,15 @@ data class RecapRankedRow(
 
 data class RecapDayHourRow(val day: String, val hour: Int, val milliseconds: Long)
 
+data class RecapMonthlyArtistRow(
+    val month: Int,
+    val id: String,
+    val title: String,
+    val artwork: String?,
+    val milliseconds: Long,
+    val plays: Long,
+)
+
 internal data class RecapSnapshot(
     val firstTimestamp: Long?,
     val totals: RecapTotalsRow,
@@ -102,6 +121,7 @@ internal data class RecapSnapshot(
     val artists: List<RecapRankedRow>,
     val albums: List<RecapRankedRow>,
     val dayHours: List<RecapDayHourRow>,
+    val monthlyArtists: List<RecapMonthlyArtistRow>,
 )
 
 internal data class RecapResult(val data: RecapData, val years: ImmutableList<Int>)

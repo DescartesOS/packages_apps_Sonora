@@ -53,6 +53,16 @@ interface RecapDao {
     suspend fun artists(start: Long, end: Long): List<RecapRankedRow>
 
     @Query("""
+        SELECT CAST(strftime('%m', e.timestamp / 1000, 'unixepoch') AS INTEGER) AS month,
+               a.id, a.name AS title, a.thumbnailUrl AS artwork,
+               SUM(e.playTime) AS milliseconds, COUNT(*) AS plays
+        FROM event e JOIN song s ON s.id = e.songId
+        JOIN song_artist_map map ON map.songId = s.id JOIN artist a ON a.id = map.artistId
+        WHERE
+    """ + RecapPeriod + " GROUP BY month, a.id ORDER BY month, milliseconds DESC, plays DESC, a.id ASC")
+    suspend fun monthlyArtists(start: Long, end: Long): List<RecapMonthlyArtistRow>
+
+    @Query("""
         SELECT a.id, a.title, a.thumbnailUrl AS artwork,
                COALESCE((SELECT GROUP_CONCAT(artist.name, ', ')
                          FROM album_artist_map names JOIN artist ON artist.id = names.artistId

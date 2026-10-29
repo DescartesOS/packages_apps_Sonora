@@ -7,14 +7,18 @@
 
 package moe.rukamori.archivetune.recap
 
+import androidx.media3.common.Player
 import dagger.hilt.android.scopes.ViewModelScoped
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.db.MusicDatabase
 import moe.rukamori.archivetune.db.entities.Album
@@ -24,20 +28,32 @@ import moe.rukamori.archivetune.extensions.toMediaItem
 import moe.rukamori.archivetune.extensions.togglePlayPause
 import moe.rukamori.archivetune.playback.PlayerConnection
 import moe.rukamori.archivetune.playback.queues.ListQueue
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @ViewModelScoped
 class RecapRepository @Inject constructor(private val database: MusicDatabase) {
     private val connection = MutableStateFlow<PlayerConnection?>(null)
 
-    internal fun attach(player: PlayerConnection?) { connection.value = player }
+    internal fun attach(player: PlayerConnection) { connection.value = player }
+
+    internal fun detach(player: PlayerConnection) { connection.compareAndSet(player, null) }
+
+    internal fun releaseMute() { connection.value?.service?.setRecapMuted(false) }
+
+    internal fun toggleMute() {
+        connection.value?.service?.let { it.setRecapMuted(!it.recapAudioMuted.value) }
+    }
 
     internal fun playback() = connection.flatMapLatest { player ->
-        if (player == null) flowOf(RecapPlayback()) else combine(player.mediaMetadata, player.isPlaying) { metadata, playing ->
-            RecapPlayback(true, metadata?.id, metadata?.title.orEmpty(), playing)
+        if (player == null) flowOf(RecapPlayback()) else {
+            val transport = combine(player.mediaMetadata, player.isPlaying, player.playbackState) { metadata, playing, state ->
+                RecapPlayback(available = true, currentId = metadata?.id, playing = playing,
+                    buffering = state == Player.STATE_BUFFERING)
+            }
+            combine(transport, player.service.recapAudioMuted, player.error, player.service.recapQueueActive) {
+                playback, muted, error, recapQueue ->
+                playback.copy(muted = muted, failed = error != null, recapQueue = recapQueue)
+            }
         }
     }
 
@@ -53,8 +69,8 @@ class RecapRepository @Inject constructor(private val database: MusicDatabase) {
         }
     }
 
-    internal suspend fun togglePlayback() = withContext(Dispatchers.Main.immediate) {
-        checkNotNull(connection.value).player.togglePlayPause()
+    internal suspend fun startSoundtrack(songs: List<Song>, title: String) = withContext(Dispatchers.Main.immediate) {
+        check(checkNotNull(connection.value).service.playRecapQueue(ListQueue(title, songs.map { it.toMediaItem() })))
     }
 
     internal fun changes() = database.recapChanges()
@@ -72,6 +88,7 @@ class RecapRepository @Inject constructor(private val database: MusicDatabase) {
                     artists = dao.artists(from, until),
                     albums = dao.albums(from, until),
                     dayHours = dao.dayHours(from, until),
+                    monthlyArtists = dao.monthlyArtists(from, until),
                 )
             }
         }

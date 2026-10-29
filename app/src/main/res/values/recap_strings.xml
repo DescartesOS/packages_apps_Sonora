@@ -3,7 +3,25 @@
     <string name="recap_year_so_far">Year so far</string>
     <string name="recap_period_so_far">%1$s · Year so far</string>
     <string name="recap_recorded_listening">Your recorded listening</string>
-    <string name="recap_highlights">View highlights</string>
+    <string name="recap_highlights">Highlight reel</string>
+    <string name="recap_story_intro">This is your year in music.</string>
+    <string name="recap_story_end">There is even more to hear.</string>
+    <string name="recap_replay">Rewatch highlights</string>
+    <string name="recap_return_overview">Back to your year</string>
+    <string name="recap_hero_title">Relive your year\nin music.</string>
+    <string name="recap_pause_highlights">Pause highlights</string>
+    <string name="recap_resume_highlights">Resume highlights</string>
+    <string name="recap_mute">Mute soundtrack</string>
+    <string name="recap_unmute">Unmute soundtrack</string>
+    <string name="recap_soundtrack_error">Soundtrack unavailable</string>
+    <string name="recap_retry_soundtrack">Retry soundtrack</string>
+    <string name="recap_soundtrack_loading">Starting soundtrack</string>
+    <string name="recap_streak_statement">Your longest listening streak was %1$s.</string>
+    <string name="recap_time_statement">You made time for music.</string>
+    <string name="recap_top_song">Top song</string>
+    <string name="recap_top_artist">Top artist</string>
+    <string name="recap_top_album">Top album</string>
+    <string name="recap_ranked_artist">%1$s · %2$s</string>
     <string name="recap_months">Your year, month by month</string>
     <string name="recap_habits">Your listening rhythm</string>
     <string name="recap_distinct_tracks">Different tracks</string>
@@ -21,7 +39,6 @@
         <item quantity="one">%1$s day</item>
         <item quantity="other">%1$s days</item>
     </plurals>
-    <string name="recap_year_title">%1$d in music</string>
     <string name="recap_summary">Your music recap</string>
     <string name="recap_choose_year">Choose a year</string>
     <string name="recap_previous">Previous highlight</string>

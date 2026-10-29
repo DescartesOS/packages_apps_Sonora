@@ -24,20 +24,31 @@ class RecapActionsUseCase @Inject constructor(
     private val repository: RecapRepository,
     private val shares: RecapShareRepository,
 ) {
-    internal fun attach(connection: PlayerConnection?) = repository.attach(connection)
+    internal fun attach(connection: PlayerConnection) = repository.attach(connection)
+    internal fun detach(connection: PlayerConnection) = repository.detach(connection)
+    internal fun releaseMute() = repository.releaseMute()
+    internal fun toggleMute() = repository.toggleMute()
     internal fun playback() = repository.playback()
-    internal suspend fun togglePlayback() = repository.togglePlayback()
 
     internal suspend fun share(data: RecapData, chapter: RecapChapter, font: Typeface) =
         shares.export(data, if (data.month == null && chapter in data.chapters) chapter else RecapChapter.SUMMARY, font)
 
     internal suspend fun play(data: RecapData, songId: String?, title: String) {
+        val songs = eligibleSongs(data)
+        val index = if (songId == null) 0 else songs.indexOfFirst { it.id == songId }.also { check(it >= 0) }
+        repository.play(songs, index, title, toggleCurrent = songId != null)
+    }
+
+    internal suspend fun startSoundtrack(data: RecapData, title: String) {
+        repository.startSoundtrack(eligibleSongs(data), title)
+    }
+
+    private suspend fun eligibleSongs(data: RecapData): List<Song> {
         val songs = repository.songs(data.songs.map { it.id }).filter {
             !it.song.isPodcast && it.artists.none { artist -> artist.blockedAt != null }
         }
         check(songs.isNotEmpty())
-        val index = if (songId == null) 0 else songs.indexOfFirst { it.id == songId }.also { check(it >= 0) }
-        repository.play(songs, index, title, toggleCurrent = songId != null)
+        return songs
     }
 
     internal suspend fun menu(entry: RecapEntry): RecapMenu = when (entry.kind) {

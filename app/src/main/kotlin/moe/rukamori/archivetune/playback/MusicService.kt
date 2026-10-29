@@ -463,6 +463,14 @@ class MusicService :
     }
 
     private var currentQueue: Queue = EmptyQueue
+        set(value) {
+            if (field !== value && value !== recapAudioQueue) {
+                recapAudioQueue = null
+                recapQueueActive.value = false
+                setRecapMuted(false)
+            }
+            field = value
+        }
     private var recommendationQueue: YouTubeQueue? = null
     private var recommendationRequest: Job? = null
     private var recommendationGeneration = 0L
@@ -553,6 +561,9 @@ class MusicService :
     private var audioNormalizationEnabled = true
     var playerVolume = MutableStateFlow(1f)
     private val audioFocusVolumeFactor = MutableStateFlow(1f)
+    val recapAudioMuted = MutableStateFlow(false)
+    val recapQueueActive = MutableStateFlow(false)
+    private var recapAudioQueue: Queue? = null
     private var effectiveVolumeRampJob: Job? = null
     private var crossfadeEnabled = false
     private var crossfadeDurationMs = 0L
@@ -1360,7 +1371,7 @@ class MusicService :
             }
         }
 
-        combine(playerVolume, normalizeFactor, audioFocusVolumeFactor) { playerVolume, normalizeFactor, audioFocusVolumeFactor ->
+        combine(playerVolume, normalizeFactor, audioFocusVolumeFactor, recapAudioMuted) { playerVolume, normalizeFactor, audioFocusVolumeFactor, _ ->
             calculateEffectivePlayerVolume(playerVolume, normalizeFactor, audioFocusVolumeFactor)
         }.collectLatest(scope) { finalVolume ->
             updateEffectiveVolume(finalVolume)
@@ -2477,7 +2488,28 @@ class MusicService :
             normalizeFactor.takeIf { it.isFinite() }?.coerceIn(MIN_AUDIO_NORMALIZATION_FACTOR, MAX_AUDIO_NORMALIZATION_FACTOR) ?: 1f
         val safeAudioFocusVolumeFactor =
             audioFocusVolumeFactor.takeIf { it.isFinite() }?.coerceIn(MIN_AUDIO_FOCUS_VOLUME_FACTOR, 1f) ?: 1f
-        return (safePlayerVolume * safeNormalizeFactor * safeAudioFocusVolumeFactor).coerceIn(0f, maxSafeGainFactor)
+        return if (recapAudioMuted.value) 0f else
+            (safePlayerVolume * safeNormalizeFactor * safeAudioFocusVolumeFactor).coerceIn(0f, maxSafeGainFactor)
+    }
+
+    fun setRecapMuted(muted: Boolean) {
+        val nextMuted = muted && recapAudioQueue === currentQueue && recapQueueActive.value
+        if (recapAudioMuted.value == nextMuted) return
+        recapAudioMuted.value = nextMuted
+        if (::player.isInitialized) applyEffectiveVolumeImmediately()
+    }
+
+    fun playRecapQueue(queue: ListQueue): Boolean {
+        setRecapMuted(false)
+        recapAudioQueue = queue
+        playQueue(queue)
+        if (currentQueue !== queue) {
+            recapAudioQueue = null
+            recapQueueActive.value = false
+            return false
+        }
+        recapQueueActive.value = true
+        return true
     }
 
     private fun currentEffectivePlayerVolume(): Float =
@@ -4095,7 +4127,7 @@ class MusicService :
         queuePageJob = null
         currentQueue = queue
         queueTitle = null
-        val permanentShuffle = dataStore.get(PermanentShuffleKey, false)
+        val permanentShuffle = dataStore.get(PermanentShuffleKey, false) && queue !== recapAudioQueue
         if (!permanentShuffle) {
             player.shuffleModeEnabled = false
         }

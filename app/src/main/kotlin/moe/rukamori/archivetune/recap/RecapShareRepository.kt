@@ -10,8 +10,11 @@ package moe.rukamori.archivetune.recap
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import android.graphics.Typeface
 import android.net.Uri
 import android.text.Layout
@@ -24,15 +27,15 @@ import coil3.request.ImageRequest
 import coil3.request.allowHardware
 import coil3.toBitmap
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import moe.rukamori.archivetune.R
 import moe.rukamori.archivetune.utils.reportException
-import java.io.File
-import java.util.UUID
-import javax.inject.Inject
 
 class RecapShareRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -41,23 +44,16 @@ class RecapShareRepository @Inject constructor(
         val entries: List<RecapEntry> = when (chapter) {
             RecapChapter.ARTISTS -> data.artists
             RecapChapter.ALBUMS -> data.albums
-            RecapChapter.TIME, RecapChapter.TRACK -> data.songs.take(1)
-            RecapChapter.SONGS -> data.songs
-            RecapChapter.SUMMARY -> data.songs.take(3)
-            RecapChapter.MONTHS, RecapChapter.HABITS -> emptyList()
+            RecapChapter.TRACK -> data.songs.take(1)
+            RecapChapter.MONTHS -> data.months.mapNotNull { it.artist }
+            else -> data.songs
         }
         val artwork = withContext(Dispatchers.Default) {
             val images = linkedMapOf<String, Bitmap>()
-            entries.forEachIndexed { index, entry ->
-                val url = entry.artwork ?: return@forEachIndexed
-                if (url in images) return@forEachIndexed
-                val size = when {
-                    chapter == RecapChapter.TRACK -> 720
-                    chapter == RecapChapter.TIME -> 500
-                    chapter == RecapChapter.SUMMARY && index == 0 -> 380
-                    chapter == RecapChapter.SUMMARY -> 84
-                    else -> 152
-                }
+            entries.forEach { entry ->
+                val url = entry.artwork ?: return@forEach
+                if (url in images) return@forEach
+                val size = if (chapter == RecapChapter.TRACK) 720 else 360
                 val result = context.imageLoader.execute(ImageRequest.Builder(context).data(url)
                     .memoryCacheKey(url).diskCacheKey(url).size(size).allowHardware(false).build())
                 result.image?.toBitmap()?.let { images[url] = it }
@@ -105,60 +101,68 @@ private class RecapPoster(
     private val secondary = RecapAppearance.Secondary
 
     fun draw(data: RecapData, chapter: RecapChapter, entries: List<RecapEntry>) {
-        canvas.drawColor(RecapAppearance.Background)
+        val topColor = if (chapter == RecapChapter.TIME || chapter == RecapChapter.HABITS) RecapAppearance.Surface else RecapAppearance.Blue
+        paint.shader = LinearGradient(0f, 0f, 0f, 1920f, topColor, RecapAppearance.Background, Shader.TileMode.CLAMP)
+        canvas.drawRect(0f, 0f, 1080f, 1920f, paint)
+        val mint = RecapAppearance.Mint and 0x00FFFFFF
+        paint.shader = RadialGradient(900f, 1400f, 1000f, intArrayOf(mint or 0x59000000, mint), null, Shader.TileMode.CLAMP)
+        canvas.drawRect(0f, 0f, 1080f, 1920f, paint)
+        paint.shader = null
+        paint.color = 0x40000000
+        canvas.drawRect(0f, 0f, 1080f, 1920f, paint)
         paragraph(text.period(data), 72f, 64f, 936, 42f, 2, color = secondary)
-        paragraph(text.chapterTitle(chapter), 72f, 162f, 936, 66f, 2, bold = true)
         when (chapter) {
+            RecapChapter.INTRO, RecapChapter.END -> {
+                paragraph(text.chapterTitle(chapter), 72f, 720f, 936, 92f, 4, bold = true)
+            }
             RecapChapter.TIME -> {
-                heroArt(data.songs.firstOrNull(), 344f, 500f)
-                paragraph(text.number(data.milliseconds / 60_000), 72f, 960f, 936, 142f, 2, bold = true)
-                label(context.getString(R.string.year_in_music_minutes_unit), 72f, 1280f, 42f, secondary)
-                label(text.plays(data.plays), 72f, 1400f, 40f, foreground)
-                label(context.getString(R.string.recap_distinct_tracks), 72f, 1500f, 36f, secondary)
-                label(text.number(data.distinctTracks), 72f, 1555f, 56f, foreground)
+                paragraph(context.getString(R.string.recap_time_statement), 72f, 220f, 936, 76f, 3, bold = true)
+                paragraph(text.number(data.milliseconds / 60_000), 72f, 520f, 936, 156f, 2, bold = true)
+                label(context.getString(R.string.year_in_music_minutes_unit), 72f, 850f, 46f, foreground)
+                label(text.plays(data.plays), 72f, 940f, 38f, secondary)
+                label(context.getString(R.string.recap_distinct_tracks) + " " + text.number(data.distinctTracks), 72f, 1010f, 34f, secondary)
+                mosaic(data.songs, 1140f)
             }
             RecapChapter.TRACK -> entries.firstOrNull()?.let { entry ->
-                heroArt(entry, 360f, 720f)
-                paragraph(entry.title, 72f, 1130f, 936, 66f, 3, bold = true)
-                paragraph(entry.subtitle, 72f, 1380f, 936, 38f, 2, color = secondary)
-                label(text.minutes(entry.milliseconds), 72f, 1550f, 48f, foreground)
-                label(text.plays(entry.plays), 72f, 1620f, 36f, secondary)
+                paragraph(text.chapterTitle(chapter), 72f, 176f, 936, 42f, 2, color = secondary)
+                heroArt(entry, 350f, 720f)
+                paragraph(entry.title, 72f, 1160f, 936, 66f, 3, bold = true)
+                paragraph(entry.subtitle, 72f, 1430f, 936, 38f, 2, color = secondary)
+                label(text.minutes(entry.milliseconds), 72f, 1610f, 48f, foreground)
+                label(text.plays(entry.plays), 72f, 1680f, 36f, secondary)
             }
-            RecapChapter.SONGS, RecapChapter.ARTISTS, RecapChapter.ALBUMS -> ranked(entries, 430f, 238f)
+            RecapChapter.SONGS, RecapChapter.ARTISTS, RecapChapter.ALBUMS -> {
+                paragraph(text.chapterTitle(chapter), 72f, 176f, 936, 66f, 2, bold = true)
+                heroArt(entries.firstOrNull(), 370f, 240f)
+                ranked(entries, 700f, 196f)
+            }
             RecapChapter.MONTHS -> {
-                val peak = data.months.maxOf { it.milliseconds }.coerceAtLeast(1)
-                data.months.forEachIndexed { index, month ->
-                    val top = 380f + index * 106f
-                    label(text.month(month.month, short = true), 72f, top, 32f, secondary)
-                    if (month.available) {
-                        paint.color = RecapAppearance.Surface
-                        canvas.drawRoundRect(RectF(220f, top - 25, 740f, top + 4), 12f, 12f, paint)
-                        paint.color = foreground
-                        val width = 520f * month.milliseconds / peak
-                        if (width > 0) canvas.drawRoundRect(RectF(220f, top - 25, 220f + width, top + 4), 12f, 12f, paint)
-                        paragraph(text.minutes(month.milliseconds), 770f, top - 34, 238, 28f, 1)
-                    }
+                paragraph(text.chapterTitle(chapter), 72f, 176f, 936, 66f, 2, bold = true)
+                data.months.filter { it.available && it.milliseconds > 0 }.forEachIndexed { index, month ->
+                    val left = 72f + (index % 3) * 320f
+                    val top = 420f + (index / 3) * 320f
+                    month.artist?.let { art(it, RectF(left + 100f, top, left + 280f, top + 180f)) }
+                    paragraph(text.month(month.month, short = true), left, top + 135f, 296, 68f, 1, bold = true)
+                    month.artist?.let { paragraph(it.title, left, top + 220f, 296, 28f, 2) }
+                    paragraph(text.minutes(month.milliseconds), left, top + 283f, 296, 24f, 1, color = secondary)
                 }
             }
-            RecapChapter.HABITS -> text.facts(data).forEachIndexed { index, fact ->
-                val top = 390f + index * 252f
-                label(fact.label, 72f, top, 34f, secondary)
-                paragraph(fact.value, 72f, top + 28, 936, 70f, 2, bold = true)
+            RecapChapter.HABITS -> {
+                paragraph(context.getString(R.string.recap_streak_statement, text.days(data.habits.longestStreak)),
+                    72f, 250f, 936, 96f, 5, bold = true)
+                mosaic(data.songs, 1060f)
             }
             RecapChapter.SUMMARY -> {
-                val song = data.songs.firstOrNull()
-                heroArt(song, 326f, 320f)
-                paragraph(text.number(data.milliseconds / 60_000), 72f, 710f, 936, 112f, 2, bold = true)
-                label(context.getString(R.string.year_in_music_minutes_unit), 72f, 966f, 36f, secondary)
-                label(context.getString(R.string.top_songs), 72f, 1050f, 32f, secondary)
-                ranked(data.songs.take(3), 1090f, 108f, compact = true)
-                data.artists.firstOrNull()?.let {
-                    label(context.getString(R.string.top_artists), 72f, 1470f, 30f, secondary)
-                    paragraph(it.title, 72f, 1494f, 936, 40f, 2, bold = true)
+                mosaic(data.songs, 220f)
+                paragraph(text.period(data.year, data.month), 72f, 830f, 936, if (data.month == null) 180f else 92f, 2)
+                val facts = buildList {
+                    data.albums.firstOrNull()?.let { add(Triple(context.getString(R.string.recap_top_album), it.title, it.subtitle)) }
+                    data.songs.firstOrNull()?.let { add(Triple(context.getString(R.string.recap_top_song), it.title, it.subtitle)) }
+                    add(Triple(context.getString(R.string.year_in_music_minutes_unit), text.number(data.milliseconds / 60_000), null))
+                    data.artists.firstOrNull()?.let { add(Triple(context.getString(R.string.recap_top_artist), it.title, null)) }
                 }
-                data.albums.firstOrNull()?.let {
-                    label(context.getString(R.string.albums), 72f, 1630f, 30f, secondary)
-                    paragraph(it.title, 72f, 1654f, 936, 40f, 2, bold = true)
+                facts.forEachIndexed { index, (label, value, subtitle) ->
+                    summaryFact(label, value, subtitle, 72f + (index % 2) * 488f, 1100f + (index / 2) * 350f)
                 }
             }
         }
@@ -172,17 +176,33 @@ private class RecapPoster(
         paragraph(context.getString(R.string.recap_recorded_listening), 520f, 1834f, 488, 25f, 1, color = secondary)
     }
 
-    private fun ranked(entries: List<RecapEntry>, start: Float, spacing: Float, compact: Boolean = false) {
+    private fun ranked(entries: List<RecapEntry>, start: Float, spacing: Float) {
         entries.take(5).forEachIndexed { index, entry ->
             val top = start + index * spacing
-            label(text.number(index.toLong() + 1), 72f, top + 50f, 32f, secondary)
-            art(entry, RectF(132f, top, if (compact) 216f else 284f, top + if (compact) 84f else 152f))
-            val left = if (compact) 242f else 320f
-            paragraph(entry.title, left, top, (1008 - left).toInt(), if (compact) 30f else 43f, 2, bold = true)
-            if (!compact) paragraph(entry.subtitle, left, top + 105, (1008 - left).toInt(), 29f, 1, color = secondary)
-            paragraph(text.minutes(entry.milliseconds), left, top + if (compact) 67f else 158f,
-                (1008 - left).toInt(), 27f, 1, color = secondary)
+            label(text.number(index.toLong() + 1), 72f, top + 45f, 32f, secondary)
+            art(entry, RectF(132f, top, 260f, top + 128f))
+            paragraph(entry.title, 296f, top, 712, 40f, 2, bold = true)
+            if (entry.subtitle.isNotBlank()) paragraph(entry.subtitle, 296f, top + 100f, 712, 27f, 1, color = secondary)
+            paragraph(text.minutes(entry.milliseconds) + " · " + text.plays(entry.plays),
+                296f, top + 140f, 712, 25f, 1, color = secondary)
         }
+    }
+
+    private fun mosaic(entries: List<RecapEntry>, top: Float) {
+        val rows = entries.take(5).chunked(3)
+        rows.forEachIndexed { rowIndex, row ->
+            val width = (936f - 24f * (row.size - 1)) / row.size
+            row.forEachIndexed { column, entry ->
+                val left = 72f + column * (width + 24f)
+                art(entry, RectF(left, top + rowIndex * 280f, left + width, top + rowIndex * 280f + 256f))
+            }
+        }
+    }
+
+    private fun summaryFact(label: String, value: String, subtitle: String?, left: Float, top: Float) {
+        paragraph(label, left, top, 448, 32f, 2, color = secondary)
+        val height = paragraph(value, left, top + 64f, 448, 52f, 3, bold = true)
+        if (!subtitle.isNullOrBlank()) paragraph(subtitle, left, top + 80f + height, 448, 28f, 2, color = secondary)
     }
 
     private fun heroArt(entry: RecapEntry?, top: Float, size: Float) {
@@ -193,7 +213,8 @@ private class RecapPoster(
         val image = entry.artwork?.let(artwork::get)
         canvas.withSave {
             val shape = android.graphics.Path().apply {
-                addRoundRect(bounds, 24f, 24f, android.graphics.Path.Direction.CW)
+                if (entry.kind == RecapEntryKind.ARTIST) addOval(bounds, android.graphics.Path.Direction.CW)
+                else addRoundRect(bounds, 24f, 24f, android.graphics.Path.Direction.CW)
             }
             clipPath(shape)
             paint.color = RecapAppearance.Surface
@@ -221,7 +242,7 @@ private class RecapPoster(
     }
 
     private fun paragraph(value: String, x: Float, y: Float, width: Int, size: Float, lines: Int,
-                          bold: Boolean = false, color: Int = foreground) {
+                          bold: Boolean = false, color: Int = foreground): Float {
         val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = size
             typeface = if (bold) Typeface.create(font, Typeface.BOLD) else font
@@ -231,5 +252,6 @@ private class RecapPoster(
             .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).setMaxLines(lines)
             .setEllipsize(android.text.TextUtils.TruncateAt.END).build()
         canvas.withSave { translate(x, y); layout.draw(this) }
+        return layout.height.toFloat()
     }
 }
