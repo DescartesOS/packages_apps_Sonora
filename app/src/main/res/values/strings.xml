@@ -66,7 +66,7 @@
     <string name="library_top_mixes_refresh">Refresh mixes</string>
     <string name="library_top_mixes_configure_ai">Configure AI</string>
     <string name="library_top_mixes_ai_not_configured_title">Configure AI to build mixes</string>
-    <string name="library_top_mixes_ai_not_configured_desc">AI integration is required before ArchiveTune can build personal top mixes.</string>
+    <string name="library_top_mixes_ai_not_configured_desc">AI integration is required before Sonora can build personal top mixes.</string>
     <string name="library_top_mixes_no_recent_history_title">No recent listening mix yet</string>
     <string name="library_top_mixes_no_recent_history">Listen to more songs, then refresh to build AI mixes from your recent history.</string>
     <string name="library_top_mixes_no_valid_mixes">AI did not return any playable mixes from your recent history.</string>
@@ -128,7 +128,7 @@
     <string name="retry">Retry</string>
     <string name="cast">Cast</string>
     <string name="cast_devices">Cast devices</string>
-    <string name="cast_sheet_subtitle">Choose where ArchiveTune plays</string>
+    <string name="cast_sheet_subtitle">Choose where Sonora plays</string>
     <string name="cast_available_devices">Available devices</string>
     <string name="cast_searching_devices">Searching for devices</string>
     <string name="cast_no_devices">No Cast devices found</string>
@@ -148,7 +148,7 @@
     <string name="play">Play</string>
     <string name="widget_pause">Pause</string>
     <string name="widget_previous">Previous</string>
-    <string name="widget_tap_to_open">Tap to open ArchiveTune</string>
+    <string name="widget_tap_to_open">Tap to open Sonora</string>
     <string name="widget_insights_title">Listening Insights</string>
     <string name="widget_recommendations">Recommendations</string>
     <string name="widget_listening_time_empty">No listening time yet</string>
@@ -338,7 +338,7 @@
     <string name="app_icon_available">Available icons</string>
     <string name="app_icon_builtin">Built in</string>
     <string name="app_icon_community">Community icon</string>
-    <string name="app_icon_builtin_description">Original ArchiveTune icon</string>
+    <string name="app_icon_builtin_description">Original Sonora icon</string>
     <string name="app_icon_identifier">ID %1$s</string>
     <string name="app_icon_community_notice">Community icons are created by users and may change over time.</string>
     <plurals name="app_icon_count">
@@ -454,14 +454,14 @@
     <string name="custom_background_adjustments_description">Adjust image in both previews.</string>
     <string name="custom_background_blur_value">%1$d dp</string>
     <string name="custom_background_scale_value">%1$d%%</string>
-    <string name="custom_background_permission_error">ArchiveTune could not keep access to this image.</string>
+    <string name="custom_background_permission_error">Sonora could not keep access to this image.</string>
     <string name="custom_background_permission_cleanup_error">The previous image access could not be released.</string>
     <string name="add_image">Add image</string>
     <string name="blur">Blur</string>
     <string name="contrast">Contrast</string>
     <string name="brightness">Brightness</string>
     <string name="custom_value">Custom value</string>
-    <string name="archivetune_canvas">ArchiveTune Canvas</string>
+    <string name="archivetune_canvas">Sonora Canvas</string>
     <string name="archivetune_canvas_desc">Animate album artwork while playing</string>
     <string name="player_background_style_v8_v9_desc">Unavailable with V8, V9, and V10 player styles</string>
     <string name="show_button1_description">Toggle visibility of button 1 in Discord Rich Presence</string>
@@ -506,9 +506,9 @@
     <string name="login">Login</string>
     <string name="not_logged_in">Not logged in</string>
     <string name="playback_confirmation_required" translatable="false">Playback confirmation required</string>
-    <string name="playback_requires_youtube_music_confirmation" translatable="false">Confirm playback in YouTube Music, then return to ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_confirmation" translatable="false">Confirm playback in YouTube Music, then return to Sonora.</string>
     <string name="playback_login_refresh_required" translatable="false">Refresh YouTube Music login</string>
-    <string name="playback_requires_youtube_music_login_refresh" translatable="false">Refresh your YouTube Music login, then return to ArchiveTune.</string>
+    <string name="playback_requires_youtube_music_login_refresh" translatable="false">Refresh your YouTube Music login, then return to Sonora.</string>
     <string name="playback_error_unknown" translatable="false">Unknown error</string>
     <string name="playback_error_no_internet" translatable="false">No network connection</string>
     <string name="playback_error_details" translatable="false">Details</string>
@@ -628,7 +628,7 @@
     <string name="eq_screen_subtitle">Shape playback for your ears and equipment</string>
     <string name="eq_sound_shaping_on">Sound shaping is on</string>
     <string name="eq_sound_shaping_off">Sound shaping is off</string>
-    <string name="eq_enable_description">Applies these controls to ArchiveTune playback</string>
+    <string name="eq_enable_description">Applies these controls to Sonora playback</string>
     <string name="eq_control_mode">Control mode</string>
     <string name="eq_basic">Basic</string>
     <string name="eq_advanced">Advanced</string>
@@ -745,12 +745,12 @@
     <string name="restore_failed">Failed to restore backup</string>
     <string name="discord_integration">Discord Integration</string>
     <string name="account_integrations_summary">Discord, Last.fm, Libre.fm, ListenBrainz</string>
-    <string name="discord_login_description">Connect your Discord account with OAuth so ArchiveTune can publish Rich Presence.</string>
+    <string name="discord_login_description">Connect your Discord account with OAuth so Sonora can publish Rich Presence.</string>
     <string name="discord_open_authorization">Open Discord authorization</string>
     <string name="discord_waiting_for_authorization">Waiting for Discord authorization...</string>
     <string name="discord_authorization_success">Discord account connected</string>
     <string name="discord_authorization_failed">Discord authorization failed</string>
-    <string name="discord_account_ready">ArchiveTune is ready to publish Rich Presence for your listening session.</string>
+    <string name="discord_account_ready">Sonora is ready to publish Rich Presence for your listening session.</string>
     <string name="discord_reauthorize_required_title">Discord session expired</string>
     <string name="discord_reauthorize_required_description">Rich Presence cannot be shown until you authorize Discord again.</string>
     <string name="discord_reauthorize_action">Reauthorize</string>
@@ -839,7 +839,7 @@
     <string name="target_language">Target Language</string>
     <string name="close_dialog">Close</string>
     <string name="support_development_title">Support development</string>
-    <string name="support_development_message">Hey there! I\'m rukamori, the developer of ArchiveTune. If ArchiveTune has earned a place in your daily listening, you can help keep it moving forward by donating or starring the project on GitHub. Thanks for supporting the work behind the app.</string>
+    <string name="support_development_message">Sonora for DescartesOS, developed by lostsignal-502. Built on the ArchiveTune framework.</string>
     <string name="support_development_donate">Donate to support development</string>
     <string name="support_development_star">Star on GitHub</string>
     <string name="later">Later</string>
@@ -932,7 +932,7 @@
     <string name="update_channel_release">Release</string>
     <string name="update_channel_release_desc">Tested updates from official GitHub Releases.</string>
     <string name="early_access_programs">Early access programs</string>
-    <string name="early_access_programs_desc">Try upcoming features before release and help shape ArchiveTune with your feedback. Join the Discord community to take part.</string>
+    <string name="early_access_programs_desc">Try upcoming features before release and help shape Sonora with your feedback. Join the Discord community to take part.</string>
     <string name="early_access_open_failed">Could not open the Discord invitation. Check that a browser or Discord is installed.</string>
     <string name="recent_commits">Recent Commits</string>
     <string name="updates_loading_commits">Loading recent commits</string>
@@ -946,7 +946,7 @@
     <string name="update_notification_channel_name">App Updates</string>
     <string name="update_notification_channel_desc">Notifications for new app updates</string>
     <string name="update_notification_title">Update Available</string>
-    <string name="update_notification_text">ArchiveTune %s is now available</string>
+    <string name="update_notification_text">Sonora %s is now available</string>
     <string name="download">Download</string>
     <string name="download_complete">Download complete</string>
     <string name="downloads">Downloads</string>
@@ -962,21 +962,21 @@
     <string name="download_failed_state">Download failed</string>
     <string name="search_downloads">Search downloads</string>
     <string name="no_matching_downloads">No matching downloads</string>
-    <string name="permissions_title">Allow ArchiveTune to work best</string>
+    <string name="permissions_title">Allow Sonora to work best</string>
     <string name="permissions_subtitle">We use a few permissions to play and manage your music reliably. You can change these anytime in system settings.</string>
     <string name="permission_storage_title">Storage access</string>
     <string name="permission_storage_desc">Required to read your downloaded and local audio files for playback.</string>
     <string name="permission_status_allowed">Allowed</string>
     <string name="next">Next</string>
     <string name="allow">Allow</string>
-    <string name="onboarding_welcome_title">Welcome to ArchiveTune</string>
+    <string name="onboarding_welcome_title">Welcome to Sonora</string>
     <string name="onboarding_welcome_subtitle">Set up playback, local music, and update permissions before you start listening.</string>
     <string name="onboarding_permissions_title">Review permissions</string>
     <string name="onboarding_permissions_subtitle">Grant only what you want now. You can continue and allow permissions later.</string>
     <string name="onboarding_login_title">Sync your listening</string>
     <string name="onboarding_login_subtitle">Log in to sync your library and history across devices and get more reliable playback.</string>
     <string name="onboarding_login_optional">Optional. You can log in later from Settings.</string>
-    <string name="onboarding_login_benefits_title">Your account helps ArchiveTune</string>
+    <string name="onboarding_login_benefits_title">Your account helps Sonora</string>
     <string name="onboarding_login_library_title">Sync your library</string>
     <string name="onboarding_login_library_desc">Keep your saved music and playlists available wherever you listen.</string>
     <string name="onboarding_login_history_title">Keep your history</string>
@@ -985,30 +985,30 @@
     <string name="onboarding_login_playback_desc">Use your account context for a more dependable playback experience.</string>
     <string name="onboarding_login_skip">Skip for now</string>
     <string name="onboarding_community_title">Stay connected</string>
-    <string name="onboarding_community_subtitle">Follow development, report issues, or support ArchiveTune.</string>
+    <string name="onboarding_community_subtitle">Explore the upstream community and projects behind Sonora.</string>
     <string name="onboarding_finish">Start listening</string>
     <string name="onboarding_gms_variant">GMS edition</string>
     <string name="onboarding_foss_variant">FOSS edition</string>
     <string name="onboarding_version_label">Version %1$s</string>
     <string name="onboarding_empty_title">Setup unavailable</string>
-    <string name="onboarding_empty_subtitle">Continue to ArchiveTune.</string>
+    <string name="onboarding_empty_subtitle">Continue to Sonora.</string>
     <string name="onboarding_error_generic">Couldn\'t load setup</string>
     <string name="onboarding_permission_allowed_by_install">Allowed by install</string>
     <string name="onboarding_permission_unavailable">Unavailable</string>
     <string name="onboarding_permission_notifications_title">Notifications</string>
     <string name="onboarding_permission_notifications_desc">Show playback controls and music activity in the notification shade.</string>
     <string name="onboarding_permission_device_audio_capture_title">On-device audio recognition</string>
-    <string name="onboarding_permission_device_audio_capture_desc">Recognize music playing in other apps without using the microphone. Android asks for screen and audio capture approval each time, ArchiveTune processes audio only.</string>
+    <string name="onboarding_permission_device_audio_capture_desc">Recognize music playing in other apps without using the microphone. Android asks for screen and audio capture approval each time, Sonora processes audio only.</string>
     <string name="onboarding_permission_bluetooth_connect_title">Bluetooth audio connection</string>
     <string name="onboarding_permission_bluetooth_connect_desc">Connect to nearby Bluetooth audio devices for playback.</string>
     <string name="onboarding_permission_network_title">Network access</string>
     <string name="onboarding_permission_network_desc">Stream music, load artwork, and check online app content.</string>
     <string name="onboarding_permission_playback_service_title">Background playback</string>
-    <string name="onboarding_permission_playback_service_desc">Keep music playing reliably when ArchiveTune is in the background.</string>
+    <string name="onboarding_permission_playback_service_desc">Keep music playing reliably when Sonora is in the background.</string>
     <string name="onboarding_permission_audio_settings_title">Audio settings and vibration</string>
     <string name="onboarding_permission_audio_settings_desc">Adjust playback audio behavior and provide light touch feedback.</string>
     <string name="onboarding_permission_app_installation_title">App installation</string>
-    <string name="onboarding_permission_app_installation_desc">Install downloaded APK updates from ArchiveTune.</string>
+    <string name="onboarding_permission_app_installation_desc">Install downloaded APK updates from Sonora.</string>
     <string name="onboarding_permission_bluetooth_scan_title">Bluetooth scan</string>
     <string name="onboarding_permission_bluetooth_scan_desc">Discover Cast and nearby playback devices.</string>
     <string name="onboarding_community_github_desc">Star the repository and follow releases.</string>
@@ -1022,7 +1022,7 @@
     <string name="playlist_suggestion_source_title">Playlist title</string>
     <string name="playlist_suggestion_source_content">Playlist content</string>
     <string name="playlist_suggestion_source_both">Playlist title and content</string>
-    <string name="music_together">ArchiveTune Music Together</string>
+    <string name="music_together">Sonora Music Together</string>
     <string name="together_display_name">Display name</string>
     <string name="together_display_name_placeholder">Your name</string>
     <string name="together_port">Session port</string>
@@ -1093,10 +1093,10 @@
     <string name="together_activity_error">Error: %1$s</string>
     <string name="got_it">Got it</string>
     <string name="together_dont_show_again">Don\'t show this again</string>
-    <string name="together_welcome_title">Welcome to ArchiveTune Music Together</string>
+    <string name="together_welcome_title">Welcome to Sonora Music Together</string>
     <string name="together_welcome_body">Music Together lets multiple devices share a live session with a synced queue and playback.</string>
     <string name="together_welcome_host_title">Host a session</string>
-    <string name="together_welcome_host_body">Tap Start session, then share the session link. Keep ArchiveTune open in the background while hosting.</string>
+    <string name="together_welcome_host_body">Tap Start session, then share the session link. Keep Sonora open in the background while hosting.</string>
     <string name="together_welcome_join_title">Join from another device</string>
     <string name="together_welcome_join_body">Open the shared link, or enter code and tap Join. Your queue and playback will follow the host.</string>
     <string name="together_welcome_permissions_title">Permissions and safety</string>
@@ -1121,7 +1121,7 @@
     <string name="scheduled_backup_enabled_description">Backups run automatically using the schedule below.</string>
     <string name="scheduled_backup_disabled_description">Automatic backups are paused.</string>
     <string name="scheduled_backup_frequency">Backup schedule</string>
-    <string name="scheduled_backup_frequency_description">Choose how often ArchiveTune creates a backup.</string>
+    <string name="scheduled_backup_frequency_description">Choose how often Sonora creates a backup.</string>
     <string name="scheduled_backup_daily">Daily</string>
     <string name="scheduled_backup_weekly">Weekly</string>
     <string name="scheduled_backup_monthly">Monthly</string>
@@ -1135,9 +1135,38 @@
     <string name="scheduled_backup_directory_saved">Backup directory saved</string>
     <string name="scheduled_backup_load_failed">Scheduled backup settings could not be loaded</string>
     <string name="scheduled_backup_update_failed">Scheduled backup settings could not be saved</string>
-    <string name="gatekeeper_connection_blocked">Connection blocked by ArchiveTune Remote. This app could not be verified as an official ArchiveTune build. Install an official build from https://github.com/rukamori/ArchiveTune or https://t.me/ArchiveTuneGC.</string>
+    <string name="gatekeeper_connection_blocked">Connection blocked by Sonora Remote. This app could not be verified as an official Sonora build. Install an official build from https://github.com/rukamori/Sonora or https://t.me/SonoraGC.</string>
     <string name="local_songs_metadata_unavailable">Imported %1$d songs. Online metadata is unavailable; file tags were kept.</string>
     <string name="modules_session_verify">Verify connection</string>
     <string name="modules_session_connected">Module connection verified</string>
     <string name="modules_session_failed">Module verification failed or expired. Open module settings to try again.</string>
+    <string name="sonora_identity">SONORA · DESCARTES OS</string>
+    <string name="sonora_welcome">Find your rhythm.</string>
+    <string name="sonora_welcome_detail">Old favorites. New obsessions. All your music, together.</string>
+    <string name="sonora_explore">Explore music</string>
+    <string name="sonora_library">Your library</string>
+    <string name="sonora_setup_brand">SONORA / DESCARTES OS</string>
+    <string name="sonora_setup_welcome">A space for your sound.</string>
+    <string name="sonora_setup_permissions">Your music. Your choices.</string>
+    <string name="sonora_setup_login">Bring your favorites.</string>
+    <string name="sonora_setup_ready">Make yourself at home.</string>
+    <string name="sonora_setup_intro">Discover something new, settle into a favorite, or take your library with you.</string>
+    <string name="sonora_setup_permission_note">Choose what Sonora can access. You can continue without granting optional permissions.</string>
+    <string name="sonora_setup_manage">Manage access</string>
+    <string name="sonora_setup_available">Ready</string>
+    <string name="sonora_setup_unavailable">Unavailable on this device</string>
+    <string name="sonora_setup_finish_note">Your listening space is ready. Explore music or start with your library.</string>
+    <string name="sonora_setup_start">Start listening</string>
+    <string name="sonora_setup_continue">Continue</string>
+    <string name="sonora_lyrics_studio">Lyrics studio</string>
+    <string name="sonora_lyrics_timing">Timing offset · %1$d ms</string>
+    <string name="sonora_lyrics_earlier">Decrease timing offset by 100 milliseconds</string>
+    <string name="sonora_lyrics_later">Increase timing offset by 100 milliseconds</string>
+    <string name="sonora_lyrics_signed_offset">%1$s ms</string>
+    <string name="sonora_lyrics_timing_hint">Adjust in 100 ms steps. Changes apply immediately.</string>
+    <string name="sonora_developer_profile">Developer · lostsignal-502</string>
+    <string name="sonora_developer_role">Sonora developer · DescartesOS</string>
+    <string name="sonora_framework_role">Sonora framework and playback foundation</string>
+    <string name="sonora_design_credit">Glass design adaptation</string>
+    <string name="sonora_lyrics_credit">Lyrics timing control adaptation</string>
 </resources>

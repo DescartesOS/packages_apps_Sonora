@@ -50,7 +50,7 @@ fun NavigationTitle(
                 .then(if (onClick != null) Modifier.focusable() else Modifier)
                 .clickable(enabled = onClick != null) {
                     onClick?.invoke()
-                }.padding(horizontal = 12.dp, vertical = 12.dp),
+                }.padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
         thumbnail?.invoke()
 
@@ -68,7 +68,7 @@ fun NavigationTitle(
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
                 overflow = TextOverflow.Ellipsis,

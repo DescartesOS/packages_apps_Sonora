@@ -104,7 +104,7 @@ private fun NewMiniPlayer(
     val swipeThumbnail by rememberPreference(moe.rukamori.archivetune.constants.SwipeThumbnailKey, true)
     val miniPlayerBackgroundStyle by rememberEnumPreference(
         key = MiniPlayerBackgroundStyleKey,
-        defaultValue = MiniPlayerBackgroundStyle.THEME,
+        defaultValue = MiniPlayerBackgroundStyle.GLASS,
     )
     val mediaMetadata by playerConnection.mediaMetadata.collectAsStateWithLifecycle()
     var gradientColors by remember {

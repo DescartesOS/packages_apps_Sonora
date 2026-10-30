@@ -195,7 +195,7 @@ fun AppearanceSettings(navController: NavController) {
     val (thumbnailCornerRadius, onThumbnailCornerRadiusChange) =
         rememberPreference(
             key = ThumbnailCornerRadiusKey,
-            defaultValue = 16f, // default dp
+            defaultValue = 28f, // default dp
         )
     val (cropThumbnailToSquare, onCropThumbnailToSquareChange) =
         rememberPreference(
@@ -205,7 +205,7 @@ fun AppearanceSettings(navController: NavController) {
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
             PlayerBackgroundStyleKey,
-            defaultValue = PlayerBackgroundStyle.DEFAULT,
+            defaultValue = PlayerBackgroundStyle.GRADIENT,
         )
     val (configuredLyricsBackground, onLyricsBackgroundChange) =
         rememberEnumPreference(
@@ -215,13 +215,13 @@ fun AppearanceSettings(navController: NavController) {
     val (miniPlayerBackground, onMiniPlayerBackgroundChange) =
         rememberEnumPreference(
             MiniPlayerBackgroundStyleKey,
-            defaultValue = MiniPlayerBackgroundStyle.THEME,
+            defaultValue = MiniPlayerBackgroundStyle.GLASS,
         )
     val (pureBlack, onPureBlackChange) = rememberPreference(PureBlackKey, defaultValue = false)
     val (navigationBarBackground, onNavigationBarBackgroundChange) =
         rememberEnumPreference(
             NavigationBarBackgroundStyleKey,
-            defaultValue = NavigationBarBackgroundStyle.THEME,
+            defaultValue = NavigationBarBackgroundStyle.GLASS,
         )
     val (navigationBarMode, onNavigationBarModeChange) =
         rememberEnumPreference(

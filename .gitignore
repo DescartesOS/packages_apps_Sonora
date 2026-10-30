@@ -117,3 +117,5 @@ core.*
 /string_cleaner.py
 /.codexignore
 /android_resource_cleaner.py
+# Local verification APKs and reports
+/artifacts/

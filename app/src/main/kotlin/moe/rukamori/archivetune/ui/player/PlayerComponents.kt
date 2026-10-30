@@ -1868,6 +1868,7 @@ fun PlayerControlsContent(
     onSliderValueChangeFinished: () -> Unit,
     currentFormat: FormatEntity? = null,
     landscape: Boolean = false,
+    glassState: dev.chrisbanes.haze.HazeState? = null,
 ) {
     val currentSong by playerConnection.currentSong.collectAsState(initial = null)
     val currentSongLiked = currentSong?.song?.liked == true
@@ -1881,6 +1882,7 @@ fun PlayerControlsContent(
     PlayerControlsLayout(
         landscape = landscape,
         playbackContent = {
+            PlayerTransportGlass(glassState) {
             PlayerPlaybackControls(
                     playerDesignStyle = playerDesignStyle,
                     playbackState = playbackState,
@@ -1897,6 +1899,7 @@ fun PlayerControlsContent(
                     playerConnection = playerConnection,
                     currentSongLiked = currentSongLiked,
                 )
+            }
             },
         ) {
         Row(

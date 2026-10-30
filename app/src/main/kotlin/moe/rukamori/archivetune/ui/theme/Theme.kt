@@ -51,7 +51,7 @@ import moe.rukamori.archivetune.constants.AppFontPreference
 import kotlin.math.abs
 import kotlin.math.min
 
-val DefaultThemeColor = Color(0xFFED5564)
+val DefaultThemeColor = Color(0xFF7965E9)
 val LocalArchiveTuneFontPreference = staticCompositionLocalOf { AppFontPreference.DEFAULT }
 val LocalArchiveTuneFontFamily = staticCompositionLocalOf { AppFontFamily }
 
@@ -172,16 +172,16 @@ fun ArchiveTuneTheme(
                         .RoundedCornerShape(8.dp),
                 small =
                     androidx.compose.foundation.shape
-                        .RoundedCornerShape(12.dp),
+                        .RoundedCornerShape(16.dp),
                 medium =
                     androidx.compose.foundation.shape
-                        .RoundedCornerShape(16.dp),
+                        .RoundedCornerShape(20.dp),
                 large =
                     androidx.compose.foundation.shape
-                        .RoundedCornerShape(24.dp),
+                        .RoundedCornerShape(28.dp),
                 extraLarge =
                     androidx.compose.foundation.shape
-                        .RoundedCornerShape(32.dp),
+                        .RoundedCornerShape(36.dp),
             )
         }
 

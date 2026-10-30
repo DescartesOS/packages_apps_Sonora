@@ -160,11 +160,11 @@ fun HomeCategoryChips(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = 68.dp)
+                .heightIn(min = 76.dp)
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
@@ -197,9 +197,9 @@ fun HomeCategoryChips(
                     FilterChipDefaults.filterChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.78f),
                         labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.94f),
-                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
                 border = null,
             )
@@ -247,7 +247,7 @@ fun HomeSectionHeader(
             }
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLargeEmphasized,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
@@ -414,7 +414,7 @@ fun QuickPicksSection(
                         ) {
                             Text(
                                 text = song.song.title,
-                                style = MaterialTheme.typography.titleLargeEmphasized,
+                                style = MaterialTheme.typography.headlineSmall,
                                 color = Color.White,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
@@ -676,7 +676,7 @@ fun RemoteQuickPicksSection(
                         ) {
                             Text(
                                 text = song.title,
-                                style = MaterialTheme.typography.titleLargeEmphasized,
+                                style = MaterialTheme.typography.headlineSmall,
                                 color = Color.White,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
@@ -947,7 +947,7 @@ fun SpeedDialSection(
     val motionScheme = MaterialTheme.motionScheme
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.86f),
         shape = MaterialTheme.shapes.large,
         tonalElevation = 1.dp,
         modifier =
@@ -1686,7 +1686,7 @@ private fun SimilarDiscoveryDeck(
         }
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.86f),
         shape = MaterialTheme.shapes.extraLarge,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         modifier = modifier,
@@ -1892,7 +1892,7 @@ private fun FeaturedPlaylistCard(
 
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.86f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.58f)),
         modifier = modifier,
     ) {

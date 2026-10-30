@@ -72,12 +72,13 @@ import moe.rukamori.archivetune.playback.queues.ListQueue
 import moe.rukamori.archivetune.playback.queues.YouTubeQueue
 import moe.rukamori.archivetune.ui.component.ExpressivePullToRefreshBox
 import moe.rukamori.archivetune.ui.component.LocalMenuState
+import moe.rukamori.archivetune.ui.component.SonoraWelcome
 import moe.rukamori.archivetune.ui.component.MenuState
 import moe.rukamori.archivetune.ui.utils.SnapLayoutInfoProvider
 import moe.rukamori.archivetune.viewmodels.HomeViewModel
 
 private val HomeFeedMaxWidth = 1_200.dp
-private val HomeSectionSpacing = 18.dp
+private val HomeSectionSpacing = 24.dp
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -163,6 +164,9 @@ fun HomeScreen(
         }
     }
 
+    val ambientColor = MaterialTheme.colorScheme.primary
+    val ambientSurface = MaterialTheme.colorScheme.surface
+
     // Attach the shell's floating-header connection inside this screen (Step 2b) so
     // Home's scroll/fling writes Home's own header state and can't leak into another
     // route's header. Bubbling reaches this ancestor Box before any shell connection.
@@ -170,6 +174,13 @@ fun HomeScreen(
         modifier =
             Modifier
                 .fillMaxSize()
+                .drawWithCache {
+                    val backdrop = Brush.verticalGradient(
+                        listOf(ambientColor.copy(alpha = 0.12f), ambientSurface.copy(alpha = 0f)),
+                        endY = 480.dp.toPx(),
+                    )
+                    onDrawBehind { drawRect(backdrop) }
+                }
                 .then(
                     if (headerScrollConnection != null) {
                         Modifier.nestedScroll(headerScrollConnection)
@@ -347,6 +358,12 @@ private fun HomeContent(
                             .fillMaxWidth()
                             .align(Alignment.TopCenter),
                 ) {
+                    item(key = "sonora_welcome", contentType = "welcome") {
+                        SonoraWelcome(
+                            onExplore = { navController.navigate(Screens.Search.route) { launchSingleTop = true } },
+                            onLibrary = { navController.navigate(Screens.Library.route) { launchSingleTop = true } },
+                        )
+                    }
                     if (uiState.showCategoryChips) {
                         item(
                             key = "home_category_chips",

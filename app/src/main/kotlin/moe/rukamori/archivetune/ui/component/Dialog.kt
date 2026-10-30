@@ -98,7 +98,7 @@ fun DefaultDialog(
         ) {
             Surface(
                 modifier = Modifier.heightIn(max = maxHeight),
-                shape = AlertDialogDefaults.shape,
+                shape = MaterialTheme.shapes.extraLarge,
                 color = AlertDialogDefaults.containerColor,
                 tonalElevation = AlertDialogDefaults.TonalElevation,
             ) {
@@ -195,7 +195,7 @@ fun ActionPromptDialog(
         ) {
             Surface(
                 modifier = Modifier.heightIn(max = maxHeight),
-                shape = AlertDialogDefaults.shape,
+                shape = MaterialTheme.shapes.extraLarge,
                 color = AlertDialogDefaults.containerColor,
                 tonalElevation = AlertDialogDefaults.TonalElevation,
             ) {
@@ -279,7 +279,7 @@ fun ListDialog(
         ) {
             Surface(
                 modifier = Modifier.heightIn(max = maxHeight),
-                shape = AlertDialogDefaults.shape,
+                shape = MaterialTheme.shapes.extraLarge,
                 color = AlertDialogDefaults.containerColor,
                 tonalElevation = AlertDialogDefaults.TonalElevation,
             ) {

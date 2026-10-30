@@ -140,6 +140,7 @@ import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.toBitmap
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -349,7 +350,7 @@ fun BottomSheetPlayer(
 
     val storedPlayerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
-        defaultValue = PlayerBackgroundStyle.DEFAULT,
+        defaultValue = PlayerBackgroundStyle.GRADIENT,
     )
     val playerUsesFixedBackground =
         playerDesignStyle == PlayerDesignStyle.V8 || playerDesignStyle == PlayerDesignStyle.V9 || playerDesignStyle == PlayerDesignStyle.V10
@@ -1247,8 +1248,11 @@ fun BottomSheetPlayer(
             ?.video
         val artworkCanvas = resolvedCanvas
 
+        val playerGlassState = remember { HazeState() }
+
         val controlsContent: @Composable ColumnScope.(MediaMetadata, Boolean) -> Unit = { mediaMetadata, landscape ->
             PlayerControlsContent(
+                glassState = if (disableBlur || playerUsesFixedBackground || playerDesignStyle == PlayerDesignStyle.V5 || playerDesignStyle == PlayerDesignStyle.V7) null else playerGlassState,
                 mediaMetadata = mediaMetadata,
                 playerDesignStyle = playerDesignStyle,
                 sliderStyle = sliderStyle,
@@ -1286,6 +1290,7 @@ fun BottomSheetPlayer(
             playerDesignStyle != PlayerDesignStyle.V9 &&
             playerDesignStyle != PlayerDesignStyle.V10
         ) {
+            Box(Modifier.fillMaxSize().hazeSource(playerGlassState)) {
             PlayerBackground(
                 playerBackground = playerBackground,
                 mediaMetadata = mediaMetadata,
@@ -1297,6 +1302,15 @@ fun BottomSheetPlayer(
                 playerCustomContrast = playerCustomContrast,
                 playerCustomBrightness = playerCustomBrightness,
             )
+                if (!disableBlur && playerBackground == PlayerBackgroundStyle.GRADIENT) {
+                    AsyncImage(
+                        model = mediaMetadata?.thumbnailUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().blur(24.dp).graphicsLayer { alpha = 0.32f },
+                    )
+                }
+            }
         }
 
 // distance

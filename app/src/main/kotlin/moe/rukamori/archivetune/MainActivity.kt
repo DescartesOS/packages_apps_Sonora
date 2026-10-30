@@ -282,7 +282,6 @@ import moe.rukamori.archivetune.ui.component.LocalMenuState
 import moe.rukamori.archivetune.ui.component.MarkdownText
 import moe.rukamori.archivetune.ui.component.NetworkStatusBanner
 import moe.rukamori.archivetune.ui.component.OverflowMenuDivider
-import moe.rukamori.archivetune.ui.component.StarDialog
 import moe.rukamori.archivetune.ui.component.TopAppBarOverflowMenu
 import moe.rukamori.archivetune.ui.component.TopSearch
 import moe.rukamori.archivetune.ui.component.TvNavigationRail
@@ -696,6 +695,7 @@ class MainActivity : ComponentActivity() {
                 updateSettings?.automaticChecksEnabled,
                 updateSettings?.notificationsEnabled,
             ) {
+                if (!BuildConfig.UPDATER_AVAILABLE) return@LaunchedEffect
                 val currentUpdateSettings = updateSettings ?: return@LaunchedEffect
                 if (
                     currentUpdateSettings.automaticChecksEnabled &&
@@ -1002,7 +1002,7 @@ class MainActivity : ComponentActivity() {
                     val floatingBarsHazeState = rememberHazeState()
                     val navigationBarBackgroundStyle by rememberEnumPreference(
                         key = NavigationBarBackgroundStyleKey,
-                        defaultValue = NavigationBarBackgroundStyle.THEME,
+                        defaultValue = NavigationBarBackgroundStyle.GLASS,
                     )
                     val navigationBarMode by rememberEnumPreference(
                         key = NavigationBarModeKey,
@@ -1175,7 +1175,7 @@ class MainActivity : ComponentActivity() {
 
                     val playerBackground by rememberEnumPreference(
                         key = PlayerBackgroundStyleKey,
-                        defaultValue = PlayerBackgroundStyle.DEFAULT,
+                        defaultValue = PlayerBackgroundStyle.GRADIENT,
                     )
                     val playerDesignStyle by rememberEnumPreference(
                         key = PlayerDesignStyleKey,
@@ -1603,74 +1603,11 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    var showStarDialog by remember { mutableStateOf(false) }
-
+                    // Sonora does not prompt listeners to star or donate to the upstream app.
                     LaunchedEffect(Unit) {
-                        kotlinx.coroutines.delay(3000)
-
                         withContext(Dispatchers.IO) {
-                            val current = dataStore[LaunchCountKey] ?: 0
-                            val newCount = current + 1
-                            dataStore.edit { prefs ->
-                                prefs[LaunchCountKey] = newCount
-                            }
+                            dataStore.edit { prefs -> prefs[LaunchCountKey] = (prefs[LaunchCountKey] ?: 0) + 1 }
                         }
-
-                        val shouldShow =
-                            withContext(Dispatchers.IO) {
-                                val hasPressed = dataStore[HasPressedStarKey] ?: false
-                                val remindAfter = dataStore[RemindAfterKey] ?: 3
-                                !hasPressed && (dataStore[LaunchCountKey] ?: 0) >= remindAfter
-                            }
-
-                        if (shouldShow) {
-                            var waited = 0L
-                            val waitStep = 500L
-                            val maxWait = 30_000L
-                            while (bottomSheetPageState.isVisible && waited < maxWait) {
-                                delay(waitStep)
-                                waited += waitStep
-                            }
-                            showStarDialog = true
-                        }
-                    }
-
-                    if (showStarDialog) {
-                        StarDialog(
-                            onDismissRequest = { showStarDialog = false },
-                            onSupport = {
-                                coroutineScope.launch {
-                                    try {
-                                        withContext(Dispatchers.IO) {
-                                            dataStore.edit { prefs ->
-                                                prefs[HasPressedStarKey] = true
-                                                prefs[RemindAfterKey] = Int.MAX_VALUE
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        reportException(e)
-                                    } finally {
-                                        showStarDialog = false
-                                    }
-                                }
-                            },
-                            onLater = {
-                                coroutineScope.launch {
-                                    try {
-                                        val launch = withContext(Dispatchers.IO) { dataStore[LaunchCountKey] ?: 0 }
-                                        withContext(Dispatchers.IO) {
-                                            dataStore.edit { prefs ->
-                                                prefs[RemindAfterKey] = launch + 20
-                                            }
-                                        }
-                                    } catch (e: Exception) {
-                                        reportException(e)
-                                    } finally {
-                                        showStarDialog = false
-                                    }
-                                }
-                            },
-                        )
                     }
 
                     val currentTitleRes =

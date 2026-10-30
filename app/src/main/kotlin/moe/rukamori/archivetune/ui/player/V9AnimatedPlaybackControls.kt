@@ -136,7 +136,7 @@ fun V9AnimatedPlaybackControls(
     ) {
         Row(
             modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             fun weightFor(button: V9PlaybackButtonType): Float = when (lastClicked) {

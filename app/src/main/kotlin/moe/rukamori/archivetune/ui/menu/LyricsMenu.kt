@@ -103,6 +103,7 @@ import moe.rukamori.archivetune.constants.AiProvider
 import moe.rukamori.archivetune.constants.AiProviderKey
 import moe.rukamori.archivetune.constants.TranslatorTargetLangKey
 import moe.rukamori.archivetune.db.entities.LyricsEntity
+import moe.rukamori.archivetune.lyrics.LyricsSyncType
 import moe.rukamori.archivetune.models.MediaMetadata
 import moe.rukamori.archivetune.ui.component.DefaultDialog
 import moe.rukamori.archivetune.ui.component.MenuSurfaceSection
@@ -705,9 +706,17 @@ fun LyricsMenu(
                 bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
             ),
     ) {
+        item(key = "sonora_lyrics_heading") {
+            SonoraLyricsHeading(mediaMetadataProvider().title, lyricsSyncOffset)
+        }
+        if (preparedLyrics?.syncType == LyricsSyncType.LINE || preparedLyrics?.syncType == LyricsSyncType.WORD) {
+            item(key = "sonora_lyrics_timing") {
+                LyricsTimingControl(lyricsSyncOffset, onLyricsSyncOffsetChange)
+            }
+        }
         item {
             MenuSurfaceSection(modifier = Modifier.padding(vertical = 6.dp)) {
-                NewActionGrid(
+                SonoraLyricsToolGrid(
                     actions =
                         listOf(
                             NewAction(
@@ -776,7 +785,7 @@ fun LyricsMenu(
                         ),
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
                 )
-                NewMenuItem(
+                SonoraLyricsSetting(
                     headlineContent = { Text(stringResource(R.string.show_lyrics_translation)) },
                     trailingContent = {
                         Switch(
@@ -788,7 +797,7 @@ fun LyricsMenu(
                     enabled = hasTranslations,
                     modifier = translationSwitchModifier,
                 )
-                NewMenuItem(
+                SonoraLyricsSetting(
                     headlineContent = {
                         Text(stringResource(R.string.show_lyrics_player_controls))
                     },

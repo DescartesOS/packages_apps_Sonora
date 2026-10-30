@@ -94,11 +94,14 @@ fun <E> ChipsRow(
                         )
                     }
                 },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(if (currentValue == value) 16.dp else 28.dp),
                 border = null,
                 colors =
                     FilterChipDefaults.filterChipColors(
                         containerColor = containerColor,
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     ),
             )
 
@@ -158,7 +161,7 @@ fun <Int> ChoiceChipsRow(
                         modifier = Modifier.graphicsLayer(rotationZ = rotationAnimation),
                     )
                 },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(28.dp),
                 border = null,
                 colors =
                     AssistChipDefaults.assistChipColors(
@@ -214,9 +217,12 @@ fun <Int> ChoiceChipsRow(
                         colors =
                             FilterChipDefaults.filterChipColors(
                                 containerColor = containerColor,
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
                             ),
                         onClick = { onValueUpdate(value) },
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(if (currentValue == value) 16.dp else 28.dp),
                         border = null,
                     )
                 }

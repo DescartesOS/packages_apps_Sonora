@@ -52,10 +52,10 @@ fun Material3SettingsGroup(
                 Modifier
                     .fillMaxWidth()
                     .animateContentSize(),
-            shape = RoundedCornerShape(24.dp),
+            shape = MaterialTheme.shapes.extraLarge,
             colors =
                 CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 ),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
@@ -84,7 +84,7 @@ private fun Material3SettingsItemRow(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(18.dp))
                     .then(if (item.onClick != null) Modifier.focusable() else Modifier)
                     .clickable(
                         enabled = item.onClick != null,
@@ -97,8 +97,8 @@ private fun Material3SettingsItemRow(
                 Box(
                     modifier =
                         Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(18.dp))
                             .background(
                                 MaterialTheme.colorScheme.primary.copy(
                                     alpha = if (item.isHighlighted) 0.15f else 0.1f,

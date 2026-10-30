@@ -472,8 +472,8 @@ fun QueueCollapsedContentV2(
                 modifier =
                     Modifier
                         .size(buttonSize)
-                        .clip(RoundedCornerShape(10.dp))
-                        .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(20.dp))
+                        .border(1.dp, borderColor, RoundedCornerShape(20.dp))
                         .clickable { onSleepTimerClick() },
                 contentAlignment = Alignment.Center,
             ) {
@@ -510,8 +510,8 @@ fun QueueCollapsedContentV2(
                 modifier =
                     Modifier
                         .size(buttonSize)
-                        .clip(RoundedCornerShape(10.dp))
-                        .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(20.dp))
+                        .border(1.dp, borderColor, RoundedCornerShape(20.dp))
                         .clickable { onShowLyrics() },
                 contentAlignment = Alignment.Center,
             ) {

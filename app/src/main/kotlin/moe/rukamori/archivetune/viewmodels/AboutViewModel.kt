@@ -410,75 +410,44 @@ class AboutViewModel
                 versionName = BuildConfig.VERSION_NAME,
                 buildHash = currentBuildHash,
                 buildVariant = if (BuildConfig.DEBUG) DebugBuildBadge else BuildConfig.ARCHITECTURE.uppercase(),
-                primaryLinks =
-                    AboutLinkCollection.of(
-                        AboutLinkUiModel(
-                            id = "github",
-                            iconResId = R.drawable.github,
-                            labelResId = R.string.about_content_desc_github,
-                            url = "https://github.com/rukamori/ArchiveTune",
-                        ),
-                        AboutLinkUiModel(
-                            id = "website",
-                            iconResId = R.drawable.website,
-                            labelResId = R.string.about_content_desc_website,
-                            url = "https://archivetune.miuka.moe",
-                        ),
-                        AboutLinkUiModel(
-                            id = "telegram",
-                            iconResId = R.drawable.telegram,
-                            labelResId = R.string.about_content_desc_telegram,
-                            url = "https://t.me/ArchiveTuneGC",
-                        ),
-                        AboutLinkUiModel(
-                            id = "donate",
-                            iconResId = R.drawable.coffee,
-                            labelResId = R.string.about_content_desc_donate,
-                            url = "https://miuka.moe/donate",
-                        ),
-                        AboutLinkUiModel(
-                            id = "discord",
-                            iconResId = R.drawable.discord,
-                            labelResId = R.string.discord,
-                            url = "https://discord.gg/archivetune",
-                        ),
-                        AboutLinkUiModel(
-                            id = "privacy_policy",
-                            iconResId = R.drawable.lock,
-                            labelResId = R.string.privacy,
-                            url = "https://archivetune.miuka.moe/privacy",
-                        ),
+                primaryLinks = AboutLinkCollection.of(
+                    AboutLinkUiModel(
+                        id = "sonora_developer",
+                        iconResId = R.drawable.github,
+                        labelResId = R.string.sonora_developer_profile,
+                        url = "https://github.com/lostsignal-502",
                     ),
-                leadDeveloper =
-                    TeamMember(
-                        avatarUrl = "https://avatars.githubusercontent.com/u/107134739?v=4",
-                        name = "morieattonkatsu",
-                        positionResId = R.string.about_position_lead_dev,
-                        profileUrl = "https://github.com/rukamori",
-                        links =
-                            AboutLinkCollection.of(
-                                AboutLinkUiModel(
-                                    id = "github",
-                                    iconResId = R.drawable.github,
-                                    labelResId = R.string.about_content_desc_github,
-                                    url = "https://github.com/rukamori",
-                                ),
-                                AboutLinkUiModel(
-                                    id = "website",
-                                    iconResId = R.drawable.website,
-                                    labelResId = R.string.about_content_desc_website,
-                                    url = "https://miuka.moe",
-                                ),
-                                AboutLinkUiModel(
-                                    id = "discord",
-                                    iconResId = R.drawable.alternate_email,
-                                    labelResId = R.string.about_content_desc_discord,
-                                    url = "https://discord.com/users/886971572668219392",
-                                ),
-                            ),
-                    ),
+                ),
+                leadDeveloper = TeamMember(
+                    avatarUrl = "https://github.com/lostsignal-502.png",
+                    name = "lostsignal-502",
+                    positionResId = R.string.sonora_developer_role,
+                    profileUrl = "https://github.com/lostsignal-502",
+                    links = AboutLinkCollection.of(),
+                ),
                 collaborators =
                     TeamMemberCollection.of(
+                        TeamMember(
+                            avatarUrl = "https://avatars.githubusercontent.com/u/107134739?v=4",
+                            name = "Rukamori",
+                            positionResId = R.string.sonora_framework_role,
+                            profileUrl = "https://github.com/rukamori/ArchiveTune",
+                            links = AboutLinkCollection.of(),
+                        ),
+                        TeamMember(
+                            avatarUrl = "https://github.com/kushagrasinghx.png",
+                            name = "kushagrasinghx · BitChord",
+                            positionResId = R.string.sonora_design_credit,
+                            profileUrl = "https://github.com/kushagrasinghx/BitChord",
+                            links = AboutLinkCollection.of(),
+                        ),
+                        TeamMember(
+                            avatarUrl = "https://github.com/maxrave-dev.png",
+                            name = "maxrave-dev · SimpMusic",
+                            positionResId = R.string.sonora_lyrics_credit,
+                            profileUrl = "https://github.com/maxrave-dev/SimpMusic",
+                            links = AboutLinkCollection.of(),
+                        ),
                         TeamMember(
                             avatarUrl = "https://avatars.githubusercontent.com/u/89002922?v=4",
                             name = "Miko",

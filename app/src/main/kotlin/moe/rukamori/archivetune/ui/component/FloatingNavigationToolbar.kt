@@ -151,7 +151,7 @@ fun FloatingNavigationToolbar(
                                 .widthIn(max = NavigationItemsMaxWidth)
                                 .fillMaxWidth()
                                 .fillMaxHeight()
-                                .padding(vertical = NavigationItemVerticalPadding),
+                                .padding(horizontal = 8.dp, vertical = NavigationItemVerticalPadding),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         items.forEach { screen ->
@@ -160,31 +160,11 @@ fun FloatingNavigationToolbar(
                                 screen, selected, onItemClick, onSearchItemDoubleClick,
                             )
 
-                            ShortNavigationBarItem(
+                            SonoraNavigationItem(
+                                screen = screen,
                                 selected = selected,
                                 onClick = onClick,
-                                modifier = Modifier.weight(1f),
-                                icon = {
-                                    Crossfade(
-                                        targetState = selected,
-                                        animationSpec = motionScheme.fastEffectsSpec(),
-                                        label = "navigationItemIcon",
-                                    ) { isSelected ->
-                                        Icon(
-                                            painter =
-                                                painterResource(
-                                                    if (isSelected) screen.iconIdActive else screen.iconIdInactive,
-                                                ),
-                                            contentDescription = null,
-                                        )
-                                    }
-                                },
-                                label = {
-                                    Text(
-                                        text = stringResource(screen.titleId),
-                                        maxLines = 1,
-                                    )
-                                },
+                                modifier = Modifier.weight(if (selected) 1.65f else 1f),
                             )
                         }
                     }

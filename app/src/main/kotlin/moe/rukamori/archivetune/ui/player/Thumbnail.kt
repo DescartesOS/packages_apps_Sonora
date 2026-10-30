@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import moe.rukamori.archivetune.ui.component.sonoraGlassRim
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -150,7 +151,7 @@ fun Thumbnail(
     val (thumbnailCornerRadius, _) =
         rememberPreference(
             key = ThumbnailCornerRadiusKey,
-            defaultValue = 16f,
+            defaultValue = 28f,
         )
     val cropThumbnailToSquare by rememberPreference(CropThumbnailToSquareKey, false)
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
@@ -429,7 +430,8 @@ fun Thumbnail(
                                 modifier =
                                     Modifier
                                         .size(artworkSize)
-                                        .clip(RoundedCornerShape(thumbnailCornerRadius.dp)),
+                                        .clip(RoundedCornerShape(thumbnailCornerRadius.dp))
+                                        .sonoraGlassRim(RoundedCornerShape(thumbnailCornerRadius.dp)),
                             ) {
                                 if (hidePlayerThumbnail) {
                                     // Show app logo when thumbnail is hidden
