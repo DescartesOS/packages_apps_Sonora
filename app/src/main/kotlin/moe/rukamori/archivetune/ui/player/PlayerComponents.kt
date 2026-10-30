@@ -88,6 +88,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.CompositionLocalProvider
 import moe.rukamori.archivetune.ui.component.LocalMenuState
+import moe.rukamori.archivetune.ui.component.sonoraGlassRim
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1101,7 +1102,7 @@ fun PlayerPlaybackControls(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = PlayerHorizontalPadding),
+                        .padding(horizontal = 20.dp),
             ) {
                 Row(
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -1112,7 +1113,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(CircleShape)
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     playerConnection.player.shuffleModeEnabled = !shuffleModeEnabled
@@ -1134,7 +1135,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(52.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(CircleShape)
                                 .background(textBackgroundColor.copy(alpha = 0.08f))
                                 .clickable(enabled = canSkipPrevious) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1154,7 +1155,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(70.dp)
-                                .clip(RoundedCornerShape(50))
+                                .clip(CircleShape)
                                 .background(textBackgroundColor)
                                 .clickable {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1193,7 +1194,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(52.dp)
-                                .clip(RoundedCornerShape(14.dp))
+                                .clip(CircleShape)
                                 .background(textBackgroundColor.copy(alpha = 0.08f))
                                 .clickable(enabled = canSkipNext) {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1213,7 +1214,7 @@ fun PlayerPlaybackControls(
                         modifier =
                             Modifier
                                 .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(CircleShape)
                                 .clickable {
                                     if (enableHapticFeedback) {
                                         view.performHapticFeedback(
@@ -2245,6 +2246,14 @@ fun V8PlayerContent(
     val titleActions = rememberPlayerTitleActions(mediaMetadata, navController, state)
     val onTitleClick = titleActions.onTitleClick
     val onArtistClick = titleActions.onArtistClick
+    val glassCardShape = RoundedCornerShape(36.dp)
+    val glassCardModifier =
+        modifier
+            .fillMaxSize()
+            .padding(10.dp)
+            .clip(glassCardShape)
+            .background(Color.White.copy(alpha = 0.07f))
+            .sonoraGlassRim(glassCardShape)
 
     if (landscape) {
         V8LandscapeContent(
@@ -2286,7 +2295,7 @@ fun V8PlayerContent(
             onSliderValueChange = onSliderValueChange,
             onSliderValueChangeFinished = onSliderValueChangeFinished,
             onVolumeChange = onVolumeChange,
-            modifier = modifier,
+            modifier = glassCardModifier,
         )
     } else {
         V8PortraitContent(
@@ -2328,7 +2337,7 @@ fun V8PlayerContent(
             onSliderValueChange = onSliderValueChange,
             onSliderValueChangeFinished = onSliderValueChangeFinished,
             onVolumeChange = onVolumeChange,
-            modifier = modifier,
+            modifier = glassCardModifier,
         )
     }
 }
@@ -2671,12 +2680,14 @@ private fun V8Artwork(
     size: androidx.compose.ui.unit.Dp,
 ) {
     val artworkRequest = rememberOfflineArtworkImageRequest(artworkUrl)
+    val artworkShape = RoundedCornerShape(26.dp)
     Box(
         modifier =
             Modifier
                 .size(size)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.White.copy(alpha = 0.08f)),
+                .clip(artworkShape)
+                .background(Color.White.copy(alpha = 0.08f))
+                .sonoraGlassRim(artworkShape),
     ) {
         AsyncImage(
             model = artworkRequest,
@@ -2937,8 +2948,8 @@ internal fun V8TransportControls(
                 onPlayPauseClick()
             },
             shape = CircleShape,
-            color = Color.Transparent,
-            modifier = Modifier.size(72.dp),
+            color = foreground.copy(alpha = 0.14f),
+            modifier = Modifier.size(78.dp).sonoraGlassRim(CircleShape),
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),

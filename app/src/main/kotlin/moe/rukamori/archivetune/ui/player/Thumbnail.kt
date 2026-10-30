@@ -156,7 +156,7 @@ fun Thumbnail(
     val cropThumbnailToSquare by rememberPreference(CropThumbnailToSquareKey, false)
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     val (backdropEnabled) = rememberPreference(BackdropEnabledKey, defaultValue = true)
-    val (backdropBlurAmount) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
+    val (backdropBlurAmount) = rememberPreference(BackdropBlurAmountKey, defaultValue = 40)
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsState()
 
@@ -477,7 +477,7 @@ fun Thumbnail(
                                     val thumbnailBgBlurEnabled = backdropEnabled && backdropBlurAmount > 0
 
                                     if (thumbnailBgBlurEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                        val blurRadiusPx = (backdropBlurAmount * 60 / 100f).coerceAtMost(60f)
+                                        val blurRadiusPx = (backdropBlurAmount * 36 / 100f).coerceAtMost(36f)
                                         AsyncImage(
                                             model = thumbnailBgRequest,
                                             contentDescription = null,
@@ -598,7 +598,7 @@ private fun ThumbnailBgBlurApi30(
                     when (result) {
                         is SuccessResult -> {
                             val bitmap = result.image.toBitmap().copy(Bitmap.Config.ARGB_8888, true)
-                            val radius = (blurAmount * 25 / 100f).coerceIn(1f, 25f)
+                            val radius = (blurAmount * 16 / 100f).coerceIn(1f, 16f)
                             ImageBlurUtils.blur(bitmap, radius)
                         }
 

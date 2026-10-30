@@ -8,4 +8,4 @@ Built on [ArchiveTune](https://github.com/rukamori/ArchiveTune) by Rukamori and 
 
 Licensed under [GPL-3.0](LICENSE). Copyright © Rukamori and ArchiveTune contributors for their original contributions.
 
-ROM module: `Sonora` at `packages/apps/Sonora`. Builds import `prebuilt/Sonora.apk`; regenerate it with `scripts/update-rom-prebuilt.sh`.
+ROM module: `Sonora` at `packages/apps/Sonora`. Builds import `prebuilt/Sonora.apk`.

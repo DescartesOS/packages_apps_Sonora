@@ -366,7 +366,7 @@ fun BottomSheetPlayer(
     val (disableBlur) = rememberPreference(DisableBlurKey, false)
     val (blurRadius) = rememberPreference(BlurRadiusKey, 48f)
     val (backdropEnabled) = rememberPreference(BackdropEnabledKey, defaultValue = true)
-    val (backdropBlurAmount) = rememberPreference(BackdropBlurAmountKey, defaultValue = 60)
+    val (backdropBlurAmount) = rememberPreference(BackdropBlurAmountKey, defaultValue = 40)
     val (showCodecOnPlayer) = rememberPreference(booleanPreferencesKey("show_codec_on_player"), false)
     val (incrementalSeekSkipEnabled) = rememberPreference(moe.rukamori.archivetune.constants.SeekExtraSeconds, defaultValue = false)
     var keyboardSkipMultiplier by remember { mutableStateOf(1) }
@@ -2092,7 +2092,7 @@ private fun V8PlayerBackdrop(
         )
     }
     val backdropRequest = rememberOfflineArtworkImageRequest(currentUrl)
-    val blurRadiusDp = 44.dp * (backdropBlurAmount.toFloat() / 100f)
+    val blurRadiusDp = 28.dp * (backdropBlurAmount.toFloat() / 100f)
 
     Box(
         modifier =
@@ -2199,7 +2199,7 @@ private fun BackdropBlurApi30(
                     when (result) {
                         is SuccessResult -> {
                             val bitmap = result.image.toBitmap().copy(Bitmap.Config.ARGB_8888, true)
-                            val radius = (blurAmount * 25 / 100f).coerceIn(1f, 25f)
+                            val radius = (blurAmount * 16 / 100f).coerceIn(1f, 16f)
                             ImageBlurUtils.blur(bitmap, radius)
                         }
 
